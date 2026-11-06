@@ -1,0 +1,86 @@
+{
+  "model_name": "APMCMandiHarmonicTimeForecaster",
+  "version": "1.5.0",
+  "framework": "scikit-learn",
+  "algorithm": "FourierHarmonicRidgeRegression",
+  "forecast_horizon_days": 30,
+  "commodities_tracked": [
+    "Wheat",
+    "Paddy (Common)",
+    "Paddy (Basmati)",
+    "Potato",
+    "Tomato",
+    "Gram (Chickpea)",
+    "Soybean",
+    "Maize",
+    "Cotton (Medium Staple)",
+    "Mustard"
+  ],
+  "mandis_covered": [
+    "Khanna",
+    "Kota",
+    "Surat",
+    "Akola",
+    "Gulbarga",
+    "Hapur",
+    "Neemuch",
+    "Karnal",
+    "Rajpura",
+    "Indore"
+  ],
+  "metrics_per_commodity": {
+    "Wheat": {
+      "mape": 0.0161,
+      "samples": 610,
+      "latest_price": 2251.52
+    },
+    "Paddy (Common)": {
+      "mape": 0.0135,
+      "samples": 610,
+      "latest_price": 2244.15
+    },
+    "Paddy (Basmati)": {
+      "mape": 0.0234,
+      "samples": 610,
+      "latest_price": 3785.93
+    },
+    "Potato": {
+      "mape": 0.0843,
+      "samples": 610,
+      "latest_price": 1523.1
+    },
+    "Tomato": {
+      "mape": 0.1202,
+      "samples": 610,
+      "latest_price": 1698.05
+    },
+    "Gram (Chickpea)": {
+      "mape": 0.0115,
+      "samples": 610,
+      "latest_price": 5299.49
+    },
+    "Soybean": {
+      "mape": 0.0149,
+      "samples": 610,
+      "latest_price": 4631.33
+    },
+    "Maize": {
+      "mape": 0.0195,
+      "samples": 610,
+      "latest_price": 2180.65
+    },
+    "Cotton (Medium Staple)": {
+      "mape": 0.0157,
+      "samples": 610,
+      "latest_price": 7150.49
+    },
+    "Mustard": {
+      "mape": 0.0132,
+      "samples": 610,
+      "latest_price": 5469.43
+    }
+  },
+  "average_mape": 0.0332,
+  "model_file": "mandi_forecast_model.joblib",
+  "status": "trained_and_verified"
+}

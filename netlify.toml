@@ -1,0 +1,43 @@
+# ==============================================================================
+# Netlify Deployment Configuration - AI Crop Platform Frontend
+# ==============================================================================
+
+[build]
+  # Build the Vite React application
+  command = "npm run build"
+  # Directory where production assets are generated
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Optional: Proxy /api requests to Render backend if needed
+# You can override this with your live Render backend URL or rely on VITE_API_BASE_URL
+[[redirects]]
+  from = "/api/*"
+  to = "https://ai-crop-backend.onrender.com/api/:splat"
+  status = 200
+  force = false
+
+# Single Page App (SPA) fallback - routes all non-static requests to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security and Performance HTTP Response Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), geolocation=(self), microphone=()"
+
+# Cache static assets for fast loading
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -1,0 +1,6 @@
+{
+  "name": "AI Crop - Smart Agriculture & Crop Intelligence Platform",
+  "description": "AI-driven Smart Agriculture Platform with crop intelligence, soil health analysis, market predictions, weather advisory, and AI farm advisor.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

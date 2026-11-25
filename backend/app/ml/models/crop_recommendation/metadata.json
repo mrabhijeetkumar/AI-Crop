@@ -1,0 +1,63 @@
+{
+  "model_name": "RandomForestCropRecommendationClassifier",
+  "version": "2.1.0",
+  "framework": "scikit-learn",
+  "algorithm": "RandomForestClassifier",
+  "n_estimators": 120,
+  "input_features": [
+    "N",
+    "P",
+    "K",
+    "temperature",
+    "humidity",
+    "ph",
+    "rainfall"
+  ],
+  "target_classes": [
+    "apple",
+    "banana",
+    "blackgram",
+    "chickpea",
+    "coconut",
+    "coffee",
+    "cotton",
+    "grapes",
+    "jute",
+    "kidneybeans",
+    "lentil",
+    "maize",
+    "mango",
+    "mothbeans",
+    "mungbean",
+    "muskmelon",
+    "orange",
+    "papaya",
+    "pigeonpeas",
+    "pomegranate",
+    "rice",
+    "watermelon"
+  ],
+  "class_count": 22,
+  "metrics": {
+    "test_accuracy": 0.9955,
+    "macro_f1_score": 0.9955,
+    "cv_5fold_mean_accuracy": 0.9959,
+    "cv_5fold_std": 0.003
+  },
+  "feature_importances": {
+    "N": 0.096,
+    "P": 0.1498,
+    "K": 0.1771,
+    "temperature": 0.0776,
+    "humidity": 0.2241,
+    "ph": 0.0492,
+    "rainfall": 0.2261
+  },
+  "dataset_summary": {
+    "total_samples": 2200,
+    "train_samples": 1760,
+    "test_samples": 440
+  },
+  "model_file": "crop_recommendation_random_forest.joblib",
+  "status": "trained_and_verified"
+}

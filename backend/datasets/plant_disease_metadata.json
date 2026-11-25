@@ -1,0 +1,573 @@
+[
+  {
+    "class_id": 0,
+    "crop": "Apple",
+    "disease_name": "Apple Scab",
+    "is_healthy": false,
+    "pathogen": "Venturia inaequalis (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Olive-green to brown velvety spots on upper leaf surfaces and scabby lesions on fruits.",
+    "chemical_treatment": "Spray Captan 50% WP @ 2.5g/L or Difenoconazole 25% EC @ 0.5ml/L at petal fall stage.",
+    "organic_treatment": "Apply 5% Neem Seed Kernel Extract (NSKE) or Liquid Copper Octanoate spray.",
+    "precautions": [
+      "Prune and destroy fallen infected leaves.",
+      "Ensure adequate tree canopy aeration."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 1,
+    "crop": "Apple",
+    "disease_name": "Black Rot",
+    "is_healthy": false,
+    "pathogen": "Botryosphaeria obtusa (Fungus)",
+    "severity": "High",
+    "symptoms": "Frog-eye leaf spots with purple margins and mummified rotting fruit.",
+    "chemical_treatment": "Apply Mancozeb 75% WP @ 2.5g/L or Thiophanate Methyl 70% WP @ 1g/L.",
+    "organic_treatment": "Foliar spray with Bacillus subtilis bio-fungicide @ 3g/L.",
+    "precautions": [
+      "Remove dead wood and mummified apples during winter pruning."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 2,
+    "crop": "Apple",
+    "disease_name": "Cedar Apple Rust",
+    "is_healthy": false,
+    "pathogen": "Gymnosporangium juniperi-virginianae (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Bright yellow-orange circular lesions on upper leaf surfaces with gelatinous rust horns.",
+    "chemical_treatment": "Foliar spray of Myclobutanil 10% WP @ 1g/L or Propiconazole 25% EC @ 1ml/L.",
+    "organic_treatment": "Sulfur wettable powder (80% WP) @ 2.5g/L applied at pink bud stage.",
+    "precautions": [
+      "Eradicate nearby wild juniper bushes within 500 meters of orchard."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 3,
+    "crop": "Apple",
+    "disease_name": "Healthy Apple Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Vibrant green leaves, uniform cellular turgor, no visible lesions or necrotic tissue.",
+    "chemical_treatment": "No chemical fungicide required.",
+    "organic_treatment": "Maintain balanced foliar micronutrient and seaweed extract nutrition.",
+    "precautions": [
+      "Routine fortnightly orchard monitoring."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 4,
+    "crop": "Maize",
+    "disease_name": "Cercospora Leaf Spot (Gray Leaf Spot)",
+    "is_healthy": false,
+    "pathogen": "Cercospora zeae-maydis (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Rectangular, tan-to-gray lesions running parallel to leaf veins.",
+    "chemical_treatment": "Spray Azoxystrobin 18.2% + Difenoconazole 11.4% SC @ 1ml/L.",
+    "organic_treatment": "Trichoderma viride bio-fungicide @ 5g/L spray.",
+    "precautions": [
+      "Practice crop rotation with non-host legumes (Soybean/Gram)."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 5,
+    "crop": "Maize",
+    "disease_name": "Common Rust",
+    "is_healthy": false,
+    "pathogen": "Puccinia sorghi (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Golden-brown to cinnamon-brown powdery pustules on both leaf surfaces.",
+    "chemical_treatment": "Foliar application of Propiconazole 25% EC @ 1ml/L at first appearance.",
+    "organic_treatment": "Spray 2% Cow urine distillate + Neem oil (10000 ppm) @ 3ml/L.",
+    "precautions": [
+      "Plant resistant hybrid varieties (e.g. DKC-9108 / Bio-9681)."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 6,
+    "crop": "Maize",
+    "disease_name": "Northern Leaf Blight",
+    "is_healthy": false,
+    "pathogen": "Exserohilum turcicum (Fungus)",
+    "severity": "High",
+    "symptoms": "Large, cigar-shaped grayish-green elliptical lesions (2.5 to 15 cm long).",
+    "chemical_treatment": "Spray Mancozeb 75% WP @ 2.5g/L or Pyraclostrobin 20% WG @ 1g/L.",
+    "organic_treatment": "Pseudomonas fluorescens (1% WP) @ 4g/L foliar spray.",
+    "precautions": [
+      "Deep summer plowing to bury crop stubbles."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 7,
+    "crop": "Maize",
+    "disease_name": "Healthy Maize Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Broad, upright green leaves with healthy vascular bundle structure.",
+    "chemical_treatment": "No intervention required.",
+    "organic_treatment": "Apply 1% soluble NPK 19-19-19 foliar spray at knee-high stage.",
+    "precautions": [
+      "Ensure proper weed control in early vegetative stages."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 8,
+    "crop": "Potato",
+    "disease_name": "Early Blight",
+    "is_healthy": false,
+    "pathogen": "Alternaria solani (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Target-board concentric dark brown rings on older lower leaves.",
+    "chemical_treatment": "Spray Chlorothalonil 75% WP @ 2g/L or Mancozeb @ 2.5g/L.",
+    "organic_treatment": "Foliar spray with Trichoderma harzianum @ 5g/L + 2% Aloe vera extract.",
+    "precautions": [
+      "Avoid overhead sprinkler irrigation to keep foliage dry."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 9,
+    "crop": "Potato",
+    "disease_name": "Late Blight",
+    "is_healthy": false,
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "severity": "Critical",
+    "symptoms": "Water-soaked dark lesions on leaf tips with white cottony mildew under humid mornings.",
+    "chemical_treatment": "Immediate spray of Cymoxanil 8% + Mancozeb 64% WP @ 3g/L or Metalaxyl-M @ 2.5g/L.",
+    "organic_treatment": "Copper Oxychloride (50% WP) @ 3g/L as preventive barrier.",
+    "precautions": [
+      "Destroy infected plants immediately; check daily under cold foggy weather."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 10,
+    "crop": "Potato",
+    "disease_name": "Healthy Potato Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Robust deep-green canopy, sturdy stems, active stolon formation.",
+    "chemical_treatment": "No chemical intervention needed.",
+    "organic_treatment": "Preventive spray of bio-potash and vermiwash (5%).",
+    "precautions": [
+      "Maintain regular earthing-up to prevent tuber greening."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 11,
+    "crop": "Tomato",
+    "disease_name": "Bacterial Spot",
+    "is_healthy": false,
+    "pathogen": "Xanthomonas perforans (Bacteria)",
+    "severity": "High",
+    "symptoms": "Small, water-soaked dark circular spots surrounded by yellow halos.",
+    "chemical_treatment": "Spray Streptocycline (90:10) @ 0.5g/L + Copper Oxychloride @ 2.5g/L.",
+    "organic_treatment": "Kasugamycin 3% SL @ 1.5ml/L or Pseudomonas fluorescens @ 5g/L.",
+    "precautions": [
+      "Use certified disease-free seeds and avoid field work during wet periods."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 12,
+    "crop": "Tomato",
+    "disease_name": "Early Blight",
+    "is_healthy": false,
+    "pathogen": "Alternaria linariae (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Concentric dark brown rings starting on oldest leaves, causing early defoliation.",
+    "chemical_treatment": "Spray Azoxystrobin 23% SC @ 1ml/L or Mancozeb 75% WP @ 2.5g/L.",
+    "organic_treatment": "Neem oil (10000 ppm) @ 3ml/L mixed with mild soap emulsifier.",
+    "precautions": [
+      "Stake plants and mulch soil to prevent soil splashing."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 13,
+    "crop": "Tomato",
+    "disease_name": "Late Blight",
+    "is_healthy": false,
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "severity": "Critical",
+    "symptoms": "Rapidly expanding dark water-soaked patches on leaves and stems with white spore growth.",
+    "chemical_treatment": "Spray Dimethomorph 50% WP @ 1g/L + Mancozeb @ 2g/L.",
+    "organic_treatment": "Bordeaux mixture (1%) preventive foliar drench.",
+    "precautions": [
+      "Ensure proper spacing and drip irrigation."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 14,
+    "crop": "Tomato",
+    "disease_name": "Leaf Mold",
+    "is_healthy": false,
+    "pathogen": "Passalora fulva (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Pale yellow patches on upper surface and olive-brown velvety mold on lower surface.",
+    "chemical_treatment": "Apply Difenoconazole 25% EC @ 0.5ml/L or Carbendazim 50% WP @ 1g/L.",
+    "organic_treatment": "Sulfur 80% WDG @ 2.5g/L.",
+    "precautions": [
+      "Improve greenhouse ventilation; keep humidity below 85%."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 15,
+    "crop": "Tomato",
+    "disease_name": "Septoria Leaf Spot",
+    "is_healthy": false,
+    "pathogen": "Septoria lycopersici (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Numerous small circular spots with gray centers and prominent black pycnidia speckles.",
+    "chemical_treatment": "Spray Chlorothalonil 75% WP @ 2g/L or Zineb 75% WP @ 2g/L.",
+    "organic_treatment": "Trichoderma viride (1% WP) @ 4g/L.",
+    "precautions": [
+      "Prune bottom 12 inches of leaves after first fruit set."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 16,
+    "crop": "Tomato",
+    "disease_name": "Spider Mites (Two-spotted spider mite)",
+    "is_healthy": false,
+    "pathogen": "Tetranychus urticae (Arachnid Pest)",
+    "severity": "High",
+    "symptoms": "Fine yellow stippling on leaves, severe bronzing, and delicate silk webbing under leaves.",
+    "chemical_treatment": "Spray Spiromesifen 22.9% SC @ 1ml/L or Propargite 57% EC @ 2ml/L.",
+    "organic_treatment": "Spray Wettable Sulfur 80% @ 3g/L or Pongamia (Karanja) oil @ 4ml/L.",
+    "precautions": [
+      "Avoid dusty field borders; spray water jets under leaves to break webs."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 17,
+    "crop": "Tomato",
+    "disease_name": "Target Spot",
+    "is_healthy": false,
+    "pathogen": "Corynespora cassiicola (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Small brown lesions with light brown centers that expand into target-pattern necrotic spots.",
+    "chemical_treatment": "Foliar spray with Pyraclostrobin + Metiram 55% WG @ 2g/L.",
+    "organic_treatment": "Bacillus amyloliquefaciens bio-formulation @ 3g/L.",
+    "precautions": [
+      "Maintain wide plant row spacing to enhance sunshine penetration."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 18,
+    "crop": "Tomato",
+    "disease_name": "Yellow Leaf Curl Virus (TYLCV)",
+    "is_healthy": false,
+    "pathogen": "Begomovirus (Whitefly-transmitted Virus)",
+    "severity": "Critical",
+    "symptoms": "Severe upward leaf curling, cupping, chlorosis, and stunted bushy growth.",
+    "chemical_treatment": "Target vector whiteflies with Diafenthiuron 50% WP @ 1.2g/L or Acetamiprid 20% SP @ 0.5g/L.",
+    "organic_treatment": "Install yellow sticky traps (25 traps/acre) + spray Neem oil (10000 ppm) @ 3ml/L.",
+    "precautions": [
+      "Rogue out and bury virus-infected plants immediately to stop secondary spread."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 19,
+    "crop": "Tomato",
+    "disease_name": "Mosaic Virus (ToMV)",
+    "is_healthy": false,
+    "pathogen": "Tobamovirus (Mechanically transmitted Virus)",
+    "severity": "High",
+    "symptoms": "Mottled dark and light green mosaic patterns on leaves with shoe-string deformation.",
+    "chemical_treatment": "No curative chemical; sanitize tools with 10% trisodium phosphate (TSP).",
+    "organic_treatment": "Foliar spray with milk solution (10% raw milk in water) to deactivate virions.",
+    "precautions": [
+      "Wash hands thoroughly before handling plants; avoid tobacco use near crops."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 20,
+    "crop": "Tomato",
+    "disease_name": "Healthy Tomato Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Dark green turgid foliage, vigorous flowering trusses, strong apical growth.",
+    "chemical_treatment": "No chemical intervention needed.",
+    "organic_treatment": "Apply Panchagavya (3%) foliar nourishment spray.",
+    "precautions": [
+      "Routine weekly scouting."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 21,
+    "crop": "Wheat",
+    "disease_name": "Yellow (Stripe) Rust",
+    "is_healthy": false,
+    "pathogen": "Puccinia striiformis (Fungus)",
+    "severity": "Critical",
+    "symptoms": "Yellow-orange powdery pustules arranged in distinct continuous parallel stripes on leaf blades.",
+    "chemical_treatment": "Spray Propiconazole 25% EC (Tilt) @ 1ml/L or Tebuconazole 25.9% EC @ 1ml/L immediately.",
+    "organic_treatment": "Foliar application of fermented butter-milk (Chaach 5%) + bio-potash.",
+    "precautions": [
+      "Monitor early morning cool-humid microclimates; treat in foci."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 22,
+    "crop": "Wheat",
+    "disease_name": "Brown (Leaf) Rust",
+    "is_healthy": false,
+    "pathogen": "Puccinia triticina (Fungus)",
+    "severity": "High",
+    "symptoms": "Round, orange-brown pustules scattered randomly across upper leaf surfaces.",
+    "chemical_treatment": "Spray Mancozeb 75% WP @ 2.5g/L or Hexaconazole 5% EC @ 1ml/L.",
+    "organic_treatment": "Neem seed kernel extract 5% + Trichoderma viride.",
+    "precautions": [
+      "Cultivate rust-resistant varieties such as HD-3086, DBW-187, or HD-2967."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 23,
+    "crop": "Wheat",
+    "disease_name": "Powdery Mildew",
+    "is_healthy": false,
+    "pathogen": "Blumeria graminis (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "White to grayish-white powdery patches covering upper leaf surfaces and leaf sheaths.",
+    "chemical_treatment": "Spray Wettable Sulfur 80% WP @ 3g/L or Triadimefon 25% WP @ 1g/L.",
+    "organic_treatment": "Apply Potassium silicate (0.5%) + Neem oil (3ml/L).",
+    "precautions": [
+      "Avoid excessive late-stage nitrogen fertilizer applications."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 24,
+    "crop": "Wheat",
+    "disease_name": "Healthy Wheat Crop",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Lush emerald-green erect foliage with optimal tiller count and clean flag leaf.",
+    "chemical_treatment": "No fungicides required.",
+    "organic_treatment": "Maintain optimal irrigation schedule at Crown Root Initiation (CRI) stage.",
+    "precautions": [
+      "Keep field borders free from Phalaris minor weeds."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 25,
+    "crop": "Rice",
+    "disease_name": "Bacterial Leaf Blight (BLB)",
+    "is_healthy": false,
+    "pathogen": "Xanthomonas oryzae pv. oryzae (Bacteria)",
+    "severity": "High",
+    "symptoms": "Water-soaked lesions on leaf margins turning wavy yellow-white, drying like straw.",
+    "chemical_treatment": "Spray Streptocycline @ 0.5g/L + Copper Oxychloride @ 2.5g/L.",
+    "organic_treatment": "Apply fresh cow dung slurry supernatant (20%) + Pseudomonas fluorescens @ 5g/L.",
+    "precautions": [
+      "Drain excess field water temporarily; avoid high Nitrogen doses."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 26,
+    "crop": "Rice",
+    "disease_name": "Blast (Pyricularia)",
+    "is_healthy": false,
+    "pathogen": "Magnaporthe oryzae (Fungus)",
+    "severity": "Critical",
+    "symptoms": "Spindle-shaped lesions with gray-white centers and brownish-red borders on leaf blades and neck.",
+    "chemical_treatment": "Immediate spray of Tricyclazole 75% WP (Baan) @ 0.6g/L or Isoprothiolane 40% EC @ 1.5ml/L.",
+    "organic_treatment": "Foliar spray with Pseudomonas fluorescens (1% WP) @ 5g/L.",
+    "precautions": [
+      "Avoid late transplanting and excessive basal nitrogen application."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 27,
+    "crop": "Rice",
+    "disease_name": "Brown Spot",
+    "is_healthy": false,
+    "pathogen": "Bipolaris oryzae (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Oval or circular dark brown spots with yellow halos across the leaf surface.",
+    "chemical_treatment": "Foliar spray of Mancozeb 75% WP @ 2.5g/L or Edifenphos 50% EC @ 1ml/L.",
+    "organic_treatment": "Seed treatment and foliar spray of Trichoderma viride @ 4g/L.",
+    "precautions": [
+      "Correct potash and zinc soil deficiencies; ensure balanced nutrition."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 28,
+    "crop": "Rice",
+    "disease_name": "Sheath Blight",
+    "is_healthy": false,
+    "pathogen": "Rhizoctonia solani (Fungus)",
+    "severity": "High",
+    "symptoms": "Greenish-gray oval lesions on leaf sheaths near the water level resembling snake skin.",
+    "chemical_treatment": "Spray Hexaconazole 5% SC @ 2ml/L or Validamycin 3% L @ 2ml/L.",
+    "organic_treatment": "Incorporate vermicompost enriched with Trichoderma harzianum.",
+    "precautions": [
+      "Maintain recommended seedling spacing (20x15 cm) for proper aeration."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 29,
+    "crop": "Rice",
+    "disease_name": "Healthy Rice Crop",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Uniform deep green canopy, active tillering, zero sheath or leaf lesions.",
+    "chemical_treatment": "No pesticide required.",
+    "organic_treatment": "Foliar spray of Zinc Sulphate (0.5%) + Urea (1%) at active tillering.",
+    "precautions": [
+      "Maintain 2-3 cm shallow standing water layer."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 30,
+    "crop": "Cotton",
+    "disease_name": "Bacterial Blight (Black Arm)",
+    "is_healthy": false,
+    "pathogen": "Xanthomonas citri pv. malvacearum (Bacteria)",
+    "severity": "High",
+    "symptoms": "Angular water-soaked leaf spots and dark brown-black lesions on stems (Black arm stage).",
+    "chemical_treatment": "Spray Copper Oxychloride 50% WP @ 2.5g/L + Streptocycline @ 0.5g/L.",
+    "organic_treatment": "Pseudomonas fluorescens seed treatment (10g/kg) and foliar spray (5g/L).",
+    "precautions": [
+      "Use acid-delinted certified disease-free seeds."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 31,
+    "crop": "Cotton",
+    "disease_name": "Cotton Leaf Curl Virus (CLCuV)",
+    "is_healthy": false,
+    "pathogen": "Begomovirus (Whitefly-transmitted Virus)",
+    "severity": "Critical",
+    "symptoms": "Upward leaf curling, thickening of veins, and enations (leaf-like outgrowths) under leaves.",
+    "chemical_treatment": "Control whitefly vector with Pyriproxyfen 10% EC @ 2ml/L or Spirotetramat @ 1.5ml/L.",
+    "organic_treatment": "Install yellow sticky traps (30/acre); spray Neem oil (10000 ppm) @ 3ml/L.",
+    "precautions": [
+      "Eradicate volunteer weed hosts (Abutilon indicum) near cotton fields."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 32,
+    "crop": "Cotton",
+    "disease_name": "Healthy Cotton Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Healthy broad palmate green leaves, active sympodial squaring, strong bolls.",
+    "chemical_treatment": "No chemical intervention needed.",
+    "organic_treatment": "Apply 1% 13-0-45 (Potassium Nitrate) foliar spray at peak boll formation.",
+    "precautions": [
+      "Regular scouting for early pink bollworm infestation."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 33,
+    "crop": "Mustard",
+    "disease_name": "Alternaria Leaf Blight",
+    "is_healthy": false,
+    "pathogen": "Alternaria brassicae (Fungus)",
+    "severity": "Moderate",
+    "symptoms": "Small brown-black circular spots with concentric rings on leaves, stems, and siliquae.",
+    "chemical_treatment": "Spray Mancozeb 75% WP @ 2.5g/L or Iprodione 50% WP @ 2g/L.",
+    "organic_treatment": "Foliar spray with garlic extract (2%) + Trichoderma viride @ 5g/L.",
+    "precautions": [
+      "Timely sowing before October 25 to escape peak disease severity."
+    ],
+    "timeline_hours": 48
+  },
+  {
+    "class_id": 34,
+    "crop": "Mustard",
+    "disease_name": "White Rust (Blister)",
+    "is_healthy": false,
+    "pathogen": "Albugo candida (Oomycete)",
+    "severity": "High",
+    "symptoms": "Prominent chalky-white blister-like pustules on lower leaf surfaces and stag-head floral malformation.",
+    "chemical_treatment": "Spray Metalaxyl 8% + Mancozeb 64% WP (Ridomil MZ) @ 2g/L.",
+    "organic_treatment": "Apply Copper Hydroxide (77% WP) @ 2g/L preventive foliar drench.",
+    "precautions": [
+      "Destroy stag-head infected inflorescences immediately."
+    ],
+    "timeline_hours": 36
+  },
+  {
+    "class_id": 35,
+    "crop": "Mustard",
+    "disease_name": "Healthy Mustard Crop",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Vibrant dark green lyrate leaves, robust flowering racemes, heavy siliqua pod load.",
+    "chemical_treatment": "No fungicide needed.",
+    "organic_treatment": "Apply 0.5% Sulphur 80% WDG for optimal seed oil synthesis.",
+    "precautions": [
+      "Monitor for mustard aphid colonies during cloudy spells."
+    ],
+    "timeline_hours": 168
+  },
+  {
+    "class_id": 36,
+    "crop": "Soybean",
+    "disease_name": "Soybean Rust",
+    "is_healthy": false,
+    "pathogen": "Phakopsora pachyrhizi (Fungus)",
+    "severity": "Critical",
+    "symptoms": "Tiny tan to dark brown lesions on lower leaves with volcano-shaped raised pustules.",
+    "chemical_treatment": "Spray Hexaconazole 5% EC @ 1ml/L or Azoxystrobin + Tebuconazole @ 1ml/L.",
+    "organic_treatment": "Spray bio-fungicide Bacillus subtilis @ 4g/L.",
+    "precautions": [
+      "Scout lower canopy starting at R1 flowering stage."
+    ],
+    "timeline_hours": 24
+  },
+  {
+    "class_id": 37,
+    "crop": "Soybean",
+    "disease_name": "Healthy Soybean Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "symptoms": "Trifoliate clean green leaves, active nitrogen nodulation on taproots.",
+    "chemical_treatment": "No pesticide required.",
+    "organic_treatment": "Foliar spray of 1% MOP (Potash) during pod filling.",
+    "precautions": [
+      "Ensure proper field drainage to avoid waterlogging."
+    ],
+    "timeline_hours": 168
+  }
+]

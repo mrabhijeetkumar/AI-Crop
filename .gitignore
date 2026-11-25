@@ -20,6 +20,14 @@
 *.pfx
 *.p12
 *.jks
+.certs/
+certs/
+certs/localhost-key.pem
+certs/localhost.pem
+.certs/localhost-key.pem
+.certs/localhost.pem
+rootCA*
+*.rootCA*
 credentials.json
 client_secret*.json
 google-services.json

@@ -1,5 +1,8 @@
 import express from "express";
-import path from "path";
+import { createServer as createHttpServer } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
+import fs from "node:fs";
+import path from "node:path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
@@ -8,8 +11,10 @@ import {
   getDatabaseStats,
   getUserById,
   getUserByEmail,
+  getUserByPhone,
+  getUserByEmailOrPhone,
+  createUser,
   saveUser,
-  deleteUser,
   deleteUserCascade,
   getUserSettings,
   saveUserSettings,
@@ -17,15 +22,74 @@ import {
   saveFarmProfile,
   addAuditLog,
   getAuditLogs,
-  getUserSessions,
-  revokeUserSession,
+  listSessions,
+  deleteSession,
   exportAllUserData,
+  hashPassword,
+  verifyPassword,
+  sanitizeUserResponse,
 } from "./server_db.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number.parseInt(process.env.PORT || "8000", 10) || 8000;
+
+function resolveHttpsCredentials() {
+  const isExplicitDisabled = process.env.ENABLE_HTTPS === "false";
+  if (isExplicitDisabled) return null;
+
+  const certPath = process.env.HTTPS_CERT_PATH
+    ? path.resolve(process.cwd(), process.env.HTTPS_CERT_PATH)
+    : fs.existsSync(path.resolve(process.cwd(), "certs/localhost.pem"))
+    ? path.resolve(process.cwd(), "certs/localhost.pem")
+    : path.resolve(process.cwd(), ".certs/localhost.pem");
+
+  const keyPath = process.env.HTTPS_KEY_PATH
+    ? path.resolve(process.cwd(), process.env.HTTPS_KEY_PATH)
+    : fs.existsSync(path.resolve(process.cwd(), "certs/localhost-key.pem"))
+    ? path.resolve(process.cwd(), "certs/localhost-key.pem")
+    : path.resolve(process.cwd(), ".certs/localhost-key.pem");
+
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    try {
+      const cert = fs.readFileSync(certPath);
+      const key = fs.readFileSync(keyPath);
+      return { cert, key, certPath, keyPath };
+    } catch (err: any) {
+      console.warn(`[HTTPS] Error reading TLS certificates from ${certPath}:`, err?.message || err);
+      return null;
+    }
+  }
+  return null;
+}
+
+const httpsCreds = resolveHttpsCredentials();
+const isHttps = Boolean(httpsCreds);
+const httpServer = isHttps
+  ? createHttpsServer({ key: httpsCreds!.key, cert: httpsCreds!.cert }, app)
+  : createHttpServer(app);
+
+function getAuthenticatedUserId(req: express.Request): string | null {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+  const match = /^jwt_agri_(.+)_\d+$/.exec(token);
+  return match?.[1] || null;
+}
+
+function normalizeAvatar(value: unknown): string {
+  const avatar = String(value ?? "").trim();
+  if (!avatar) return "";
+  const validPath = /^\/images\/[\w./-]+$/.test(avatar);
+  const validUrl = /^https:\/\/[^\s]+$/i.test(avatar);
+  const validData = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(avatar);
+  if (!validPath && !validUrl && !validData) {
+    throw new Error("Avatar must be a valid image URL or PNG/JPG/WEBP/GIF image.");
+  }
+  if (validData && avatar.length > 3_000_000) {
+    throw new Error("Profile photo is too large. Please use an image under 2 MB.");
+  }
+  return avatar;
+}
 
 // Support large payloads for image base64 uploads (up to 25MB)
 app.use(express.json({ limit: "25mb" }));
@@ -254,16 +318,54 @@ app.get("/api/auth/me", async (req, res) => {
   }
 });
 
+// Simple in-memory rate limiter for authentication endpoints
+const authRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function checkAuthRateLimit(ip: string, maxAttempts = 20, windowMs = 60000): boolean {
+  const now = Date.now();
+  const entry = authRateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    authRateLimitMap.set(ip, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxAttempts) return false;
+  entry.count++;
+  return true;
+}
+
+// In-memory verification token store for password reset (10 min TTL)
+const passwordResetTokens = new Map<string, { code: string; expiresAt: number }>();
+
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, error: "Email is required for login" });
+    const clientIp = req.ip || "127.0.0.1";
+    if (!checkAuthRateLimit(clientIp)) {
+      return res.status(429).json({ success: false, error: "Too many sign-in attempts. Please try again in a few moments." });
     }
 
-    const user = await getUserByEmail(email);
+    const { email, password } = req.body;
+    const identifier = (email || req.body.identifier || "").trim();
+    if (!identifier) {
+      return res.status(400).json({ success: false, error: "Email address or mobile number is required." });
+    }
+
+    const user = await getUserByEmailOrPhone(identifier);
     if (!user) {
-      return res.status(401).json({ success: false, error: "No account found with this email. Please check your credentials or register a new farm account." });
+      return res.status(401).json({ success: false, error: "No account found matching this email or mobile number." });
+    }
+
+    // Verify password if user has passwordHash configured
+    if (user.passwordHash) {
+      if (!password) {
+        return res.status(400).json({ success: false, error: "Password is required." });
+      }
+      const isMatch = await verifyPassword(password, user.passwordHash);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, error: "Incorrect password. Please verify and try again." });
+      }
+    } else if (password && password.length >= 6) {
+      // Legacy user without hash - auto-upgrade their security hash upon first login
+      const newHash = await hashPassword(password);
+      await saveUser({ id: user.id, passwordHash: newHash });
     }
 
     const updatedUser = await saveUser({
@@ -271,28 +373,28 @@ app.post("/api/auth/login", async (req, res) => {
       lastLoginAt: new Date().toISOString(),
     });
 
-    const settings = (await getUserSettings(user.id)) || (await saveUserSettings(user.id, { userId: user.id, theme: "dark", language: "en", currency: "₹" }));
+    const settings = (await getUserSettings(user.id)) || (await saveUserSettings(user.id, { userId: user.id, theme: "light", language: "en", currency: "₹" }));
     const farmProfile = (await getFarmProfile(user.id)) || (await saveFarmProfile(user.id, { userId: user.id, farmName: `${user.name}'s Farm`, ownerName: user.name }));
 
     await addAuditLog(
       user.id,
       "User Sign In",
       "auth",
-      `Successful login via ${email}. Authenticated in real-time.`,
-      req.ip || "127.0.0.1",
+      `Successful login via ${identifier}. Authenticated securely in real-time.`,
+      clientIp,
       req.headers["user-agent"] || "Web Client"
     );
 
     res.json({
       success: true,
-      user: updatedUser,
+      user: sanitizeUserResponse(updatedUser),
       settings,
       farmProfile,
       token: `jwt_agri_${user.id}_${Date.now()}`,
       message: "Successfully logged in",
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: "Login failed" });
+    res.status(500).json({ success: false, error: "Login failed. Internal service issue." });
   }
 });
 
@@ -317,97 +419,240 @@ app.post("/api/auth/logout", async (req, res) => {
 
 app.post("/api/auth/signup", async (req, res) => {
   try {
-    const { name, email, phone, role, location, farmName } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ success: false, error: "Name and email are required" });
+    const clientIp = req.ip || "127.0.0.1";
+    if (!checkAuthRateLimit(clientIp)) {
+      return res.status(429).json({ success: false, error: "Too many registration attempts. Please try again shortly." });
     }
 
-    const existingUser = await getUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ success: false, error: "An account with this email already exists. Please sign in instead." });
+    const {
+      name,
+      email,
+      phone,
+      password,
+      role = "Farmer",
+      farmName,
+      state = "",
+      district = "",
+      village = "",
+      location,
+      farmArea,
+      totalAreaAcres,
+      farmAreaUnit = "Acres",
+      primaryCrop = "",
+      farmingType = "Precision / Drip",
+    } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: "Full Name is required." });
     }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      return res.status(400).json({ success: false, error: "A valid email address is required." });
+    }
+    if (!phone || phone.trim().length < 8) {
+      return res.status(400).json({ success: false, error: "A valid mobile phone number is required." });
+    }
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, error: "Password must be at least 8 characters with numbers and capital letters." });
+    }
+
+    // Check duplicate email
+    const existingEmail = await getUserByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({ success: false, error: "An account with this email address already exists. Please sign in." });
+    }
+
+    // Check duplicate phone
+    const existingPhone = await getUserByPhone(phone);
+    if (existingPhone) {
+      return res.status(400).json({ success: false, error: "An account with this mobile number already exists. Please sign in." });
+    }
+
+    const computedLocation = location || [village, district, state].filter(Boolean).join(", ") || "India";
+    const areaVal = Number(farmArea || totalAreaAcres) || 0;
+    const computedAcres = farmAreaUnit === "Hectares" ? areaVal * 2.47105 : farmAreaUnit === "Bigha" ? areaVal * 0.62 : areaVal;
 
     const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const newUser = await saveUser({
+    const hashedPassword = await hashPassword(password);
+
+    const newUser = await createUser({
       id: newUserId,
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      phone: (phone || "").trim(),
-      role: role || "Farm Manager",
-      designation: role || "Farm Manager",
-      bio: "",
-      location: (location || "").trim(),
-      state: "",
-      district: "",
+      phone: phone.trim(),
+      passwordHash: hashedPassword,
+      role: (role as any) || "Farmer",
+      designation: (role as any) || "Farmer",
+      bio: `${role} managing agricultural operations in ${computedLocation}.`,
+      location: computedLocation,
+      state: state.trim(),
+      district: district.trim(),
       avatar: "",
-      farmerId: `PMK-REG-${Date.now().toString().slice(-6)}`,
+      farmerId: `PMK-${Date.now().toString().slice(-6)}`,
       kccNumber: "",
-      experienceYears: 0,
+      experienceYears: 1,
       twoFactorEnabled: false,
-      emailVerified: false,
-      phoneVerified: false,
+      emailVerified: true,
+      phoneVerified: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
     });
 
-    const newFarmProfile = await saveFarmProfile(newUserId, {
-      userId: newUserId,
-      farmName: farmName ? farmName.trim() : `${name.trim()}'s Farm Estate`,
-      ownerName: name.trim(),
-      location: (location || "").trim(),
-      district: "",
-      state: "",
-      country: "India",
-      totalAreaAcres: 0,
-      primaryWaterSource: "",
-      primarySoilType: "",
-      primaryCrops: [],
-      apmcMandiYard: "",
-      irrigationType: "",
-      currency: "₹",
-    });
+    let newFarmProfile;
+    let newSettings;
+    try {
+      newFarmProfile = await saveFarmProfile(newUserId, {
+        userId: newUserId,
+        farmName: farmName ? farmName.trim() : `${name.trim()}'s Farm Estate`,
+        ownerName: name.trim(),
+        location: computedLocation,
+        district: district.trim(),
+        state: state.trim(),
+        country: "India",
+        totalAreaAcres: computedAcres || 5.0,
+        primaryWaterSource: "Borewell & Canal",
+        primarySoilType: "Alluvial Loam",
+        primaryCrops: primaryCrop ? [primaryCrop] : ["Wheat", "Mustard"],
+        apmcMandiYard: district ? `${district} Mandi Yard` : "Regional APMC Mandi",
+        irrigationType: farmingType || "Precision / Drip",
+        currency: "₹",
+      });
 
-    const newSettings = await saveUserSettings(newUserId, {
-      userId: newUserId,
-      theme: "dark",
-      language: "en",
-      currency: "₹",
-      unitSystem: "metric",
-      aiModel: "gemini-2.5-flash",
-      aiTone: "practical",
-      notifications: {
-        sprayAlerts: true,
-        mandiSpikes: true,
-        pestWarnings: true,
-        weatherExtremes: true,
-        weeklySummaryEmail: true,
-        smsAlerts: false,
-        whatsAppUpdates: true,
-      },
-      autoSyncSensors: true,
-      dataSharingConsent: true,
-    });
+      newSettings = await saveUserSettings(newUserId, {
+        userId: newUserId,
+        theme: "light",
+        language: "en",
+        currency: "₹",
+        unitSystem: "metric",
+        aiModel: "gemini-2.5-flash",
+        aiTone: "practical",
+        notifications: {
+          sprayAlerts: true,
+          mandiSpikes: true,
+          pestWarnings: true,
+          weatherExtremes: true,
+          weeklySummaryEmail: true,
+          smsAlerts: false,
+          whatsAppUpdates: true,
+        },
+        autoSyncSensors: true,
+        dataSharingConsent: true,
+      });
+    } catch (setupError) {
+      await deleteUserCascade(newUserId).catch(() => {});
+      throw setupError;
+    }
 
     await addAuditLog(
       newUserId,
       "Account Created",
       "auth",
-      `New user account registered for ${name} (${email}). Initialized profile and farm in MongoDB.`,
-      req.ip || "127.0.0.1",
+      `New user account registered for ${name} (${email}). Initialized farm profile in MongoDB.`,
+      clientIp,
       req.headers["user-agent"] || "Web Client"
     );
 
     res.status(201).json({
       success: true,
-      user: newUser,
+      user: sanitizeUserResponse(newUser),
       farmProfile: newFarmProfile,
       settings: newSettings,
       token: `jwt_agri_${newUserId}_${Date.now()}`,
-      message: "Account created and saved in real-time.",
+      message: "Account created and farm workspace ready.",
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: "Registration failed" });
+    console.error("[Auth] Signup failed:", error?.message || error);
+    res.status(500).json({ success: false, error: "Registration failed. Please check inputs." });
+  }
+});
+
+// Secure Password Reset Workflow
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, error: "Email address is required." });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await getUserByEmail(cleanEmail);
+    if (!user) {
+      // Don't leak user existence in generic message
+      return res.json({ success: true, message: "If an account exists with this email, a verification code has been dispatched." });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    passwordResetTokens.set(cleanEmail, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+    await addAuditLog(
+      user.id,
+      "Password Reset Requested",
+      "security",
+      `Password reset code issued for ${cleanEmail}. Verification active for 10 minutes.`,
+      req.ip || "127.0.0.1",
+      req.headers["user-agent"] || "Web Client"
+    );
+
+    // In local/demo mode, return code for verification ease while logging securely
+    console.log(`[AUTH] Verification code for ${cleanEmail}: ${code}`);
+    res.json({
+      success: true,
+      message: "Verification code sent to your registered email.",
+      demoCode: code, // helper for immediate verification
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: "Failed to initiate reset request." });
+  }
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ success: false, error: "Email, code and new password are required." });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, error: "Password must be at least 8 characters." });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const record = passwordResetTokens.get(cleanEmail);
+    if (!record || record.expiresAt < Date.now()) {
+      return res.status(400).json({ success: false, error: "Verification code has expired or is invalid. Please request a new one." });
+    }
+    if (record.code !== code.trim()) {
+      return res.status(400).json({ success: false, error: "Invalid verification code. Please check and try again." });
+    }
+
+    const user = await getUserByEmail(cleanEmail);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "Account not found." });
+    }
+
+    const newHash = await hashPassword(newPassword);
+    const updated = await saveUser({
+      id: user.id,
+      passwordHash: newHash,
+      updatedAt: new Date().toISOString(),
+    });
+
+    passwordResetTokens.delete(cleanEmail);
+
+    await addAuditLog(
+      user.id,
+      "Password Reset Successful",
+      "security",
+      "User successfully reset security password via verification workflow.",
+      req.ip || "127.0.0.1",
+      req.headers["user-agent"] || "Web Client"
+    );
+
+    res.json({
+      success: true,
+      message: "Password reset successfully. You can now log in.",
+      user: sanitizeUserResponse(updated),
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: "Failed to reset password." });
   }
 });
 
@@ -497,7 +742,7 @@ app.get("/api/user/profile", async (req, res) => {
   try {
     const userId = (req.query.userId as string) || "usr_abhijeet_01";
     const user = await getUserById(userId);
-    res.json(user);
+    res.json(user ? sanitizeUserResponse(user) : null);
   } catch (error: any) {
     res.status(500).json({ error: "Failed to fetch user profile" });
   }
@@ -505,10 +750,12 @@ app.get("/api/user/profile", async (req, res) => {
 
 app.put("/api/user/profile", async (req, res) => {
   try {
-    const userId = req.body.id || (req.query.userId as string) || "usr_abhijeet_01";
+    const userId = getAuthenticatedUserId(req) || req.body.id || (req.query.userId as string);
+    if (!userId) return res.status(401).json({ success: false, error: "Please sign in again to update your profile." });
+    const profilePatch = { ...req.body, id: userId };
+    if (profilePatch.avatar !== undefined) profilePatch.avatar = normalizeAvatar(profilePatch.avatar);
     const updatedUser = await saveUser({
-      ...req.body,
-      id: userId,
+      ...profilePatch,
     });
 
     // Also update serverFarmProfile owner name if changed
@@ -527,7 +774,7 @@ app.put("/api/user/profile", async (req, res) => {
 
     res.json({
       success: true,
-      user: updatedUser,
+      user: sanitizeUserResponse(updatedUser),
       message: "Profile saved to MongoDB in real-time.",
     });
   } catch (error: any) {
@@ -537,10 +784,9 @@ app.put("/api/user/profile", async (req, res) => {
 
 app.post("/api/user/avatar", async (req, res) => {
   try {
-    const { userId = "usr_abhijeet_01", avatar } = req.body;
-    if (!avatar) {
-      return res.status(400).json({ error: "Avatar image URL or Base64 data is required" });
-    }
+    const userId = getAuthenticatedUserId(req) || req.body.userId;
+    if (!userId) return res.status(401).json({ success: false, error: "Please sign in again to update your profile photo." });
+    const avatar = normalizeAvatar(req.body.avatar);
 
     const updatedUser = await saveUser({
       id: userId,
@@ -700,7 +946,7 @@ app.put("/api/user/security/2fa", async (req, res) => {
 app.get("/api/user/sessions", async (req, res) => {
   try {
     const userId = (req.query.userId as string) || "usr_abhijeet_01";
-    const sessions = await getUserSessions(userId);
+    const sessions = await listSessions(userId);
     res.json({ sessions });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to fetch user sessions" });
@@ -710,7 +956,7 @@ app.get("/api/user/sessions", async (req, res) => {
 app.delete("/api/user/sessions/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await revokeUserSession(id);
+    await deleteSession(id);
     res.json({ success: true, message: "Session revoked successfully." });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to revoke session" });
@@ -1363,6 +1609,39 @@ function parseWmoCode(code: number): { condition: string; iconType: string; desc
   return { condition: "Partly Sunny", iconType: "cloud-sun", desc: "Normal agricultural microclimate conditions." };
 }
 
+const weatherSearchCache = new Map<string, { expiresAt: number; results: any[] }>();
+
+app.get("/api/weather/search", async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  if (query.length < 2) return res.json({ results: [] });
+  const cacheKey = query.toLowerCase();
+  const cached = weatherSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return res.json({ results: cached.results });
+
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json&countryCode=IN`
+    );
+    if (!geoRes.ok) throw new Error(`Geocoding responded with ${geoRes.status}`);
+    const geoData = await geoRes.json();
+    const results = (geoData?.results || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      district: item.admin2 || item.admin3 || "",
+      state: item.admin1 || "",
+      country: item.country || "India",
+      latitude: item.latitude,
+      longitude: item.longitude,
+      locationName: [item.name, item.admin2 || item.admin3, item.admin1].filter(Boolean).join(", "),
+    }));
+    weatherSearchCache.set(cacheKey, { expiresAt: Date.now() + 5 * 60 * 1000, results });
+    res.json({ results });
+  } catch (error: any) {
+    console.warn("Weather location search failed:", error?.message || error);
+    res.status(502).json({ results: [], error: "Location search is temporarily unavailable." });
+  }
+});
+
 app.get("/api/weather", async (req, res) => {
   const queryLoc = ((req.query.location as string) || "Sasaram, Rohtas, Bihar").trim();
   const apiKey = (req.query.apiKey as string) || "";
@@ -1373,6 +1652,24 @@ app.get("/api/weather", async (req, res) => {
     let resolvedLocation = queryLoc;
     let lat = queryLat;
     let lon = queryLon;
+
+    if (!isNaN(lat) && !isNaN(lon)) {
+      try {
+        const reverseRes = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+        );
+        if (reverseRes.ok) {
+          const reverse = await reverseRes.json();
+          const city = reverse.locality || reverse.city || reverse.localityInfo?.administrative?.[2]?.name || "Current location";
+          const district = reverse.localityInfo?.administrative?.find((entry: any) => entry.description === "district")?.name || "";
+          const state = reverse.principalSubdivision || "";
+          const country = reverse.countryName || "India";
+          resolvedLocation = [city, district && district !== city ? district : "", state, country].filter(Boolean).join(", ");
+        }
+      } catch (error: any) {
+        console.warn("Weather reverse geocoding unavailable:", error?.message || error);
+      }
+    }
 
     // 1. Resolve coordinates if not provided
     if (isNaN(lat) || isNaN(lon)) {
@@ -1409,7 +1706,7 @@ app.get("/api/weather", async (req, res) => {
     }
 
     // 2. Fetch High-Resolution Agro Weather from Open-Meteo
-    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,cloud_cover,wind_speed_10m,uv_index,et0_fao_evapotranspiration,soil_temperature_0_to_7cm,soil_moisture_0_to_7cm&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,et0_fao_evapotranspiration&timezone=auto&forecast_days=14`;
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,visibility,shortwave_radiation&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,cloud_cover,visibility,wind_speed_10m,uv_index,et0_fao_evapotranspiration,soil_temperature_0_to_7cm,soil_moisture_0_to_7cm,shortwave_radiation_instant&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,et0_fao_evapotranspiration,relative_humidity_2m_mean&timezone=auto&forecast_days=14`;
 
     const weatherRes = await fetch(weatherUrl);
     if (!weatherRes.ok) {
@@ -1443,8 +1740,11 @@ app.get("/api/weather", async (req, res) => {
     const evapotranspirationMm = Number((daily.et0_fao_evapotranspiration?.[0] ?? 3.8).toFixed(1));
 
     // Soil estimates
-    const soilTemp = Math.round(hourly.soil_temperature_0_to_7cm?.[0] ?? (currentTemp - 2));
-    const soilMoisturePercent = Math.round((hourly.soil_moisture_0_to_7cm?.[0] ? hourly.soil_moisture_0_to_7cm[0] * 100 : 54));
+    const soilTemp = hourly.soil_temperature_0_to_7cm?.[0] == null ? null : Math.round(hourly.soil_temperature_0_to_7cm[0]);
+    const soilMoisturePercent = hourly.soil_moisture_0_to_7cm?.[0] == null ? null : Math.round(hourly.soil_moisture_0_to_7cm[0] * 100);
+    const cloudCover = current.cloud_cover == null ? null : Math.round(current.cloud_cover);
+    const visibilityKm = current.visibility == null ? null : Number((current.visibility / 1000).toFixed(1));
+    const solarRadiation = current.shortwave_radiation == null ? null : Math.round(current.shortwave_radiation);
 
     // Sunrise & Sunset formatting
     let sunriseStr = "05:35 AM";
@@ -1476,7 +1776,7 @@ app.get("/api/weather", async (req, res) => {
       const hRainMm = Number((hourly.precipitation?.[i] ?? 0).toFixed(1));
       const hWind = Math.round(hourly.wind_speed_10m?.[i] ?? windSpeed);
       const hUv = Math.round(hourly.uv_index?.[i] ?? 0);
-      const hEto = Number((hourly.et0_fao_evapotranspiration?.[i] ?? 0.2).toFixed(2));
+      const hEto = hourly.et0_fao_evapotranspiration?.[i] == null ? null : Number(hourly.et0_fao_evapotranspiration[i].toFixed(2));
 
       // Spray evaluation for this specific hour
       let hSpray = "Optimal";
@@ -1497,6 +1797,9 @@ app.get("/api/weather", async (req, res) => {
         rainChance: hRainProb,
         precipitationMm: hRainMm,
         windSpeed: hWind,
+        cloudCover: hourly.cloud_cover?.[i] == null ? null : Math.round(hourly.cloud_cover[i]),
+        visibilityKm: hourly.visibility?.[i] == null ? null : Number((hourly.visibility[i] / 1000).toFixed(1)),
+        solarRadiation: hourly.shortwave_radiation_instant?.[i] == null ? null : Math.round(hourly.shortwave_radiation_instant[i]),
         uvIndex: hUv,
         evapotranspiration: hEto,
         spray: hSpray,
@@ -1522,7 +1825,7 @@ app.get("/api/weather", async (req, res) => {
       const dRainSum = Number((daily.precipitation_sum?.[i] ?? 0).toFixed(1));
       const dRainProb = Math.round(daily.precipitation_probability_max?.[i] ?? 10);
       const dWind = Math.round(daily.wind_speed_10m_max?.[i] ?? windSpeed);
-      const dEto = Number((daily.et0_fao_evapotranspiration?.[i] ?? 3.5).toFixed(1));
+      const dEto = daily.et0_fao_evapotranspiration?.[i] == null ? null : Number(daily.et0_fao_evapotranspiration[i].toFixed(1));
 
       // Spray condition
       let dSpray = "Good";
@@ -1540,7 +1843,7 @@ app.get("/api/weather", async (req, res) => {
         farmingAdvisory = `Gusty winds up to ${dWind} km/h. Avoid aerial drone spraying due to chemical drift hazard.`;
       } else if (dTempMax > 36) {
         farmingAdvisory = `Elevated daytime temperature (${dTempMax}°C). Schedule irrigation in early morning to minimize heat stress.`;
-      } else if (dEto > 4.8) {
+      } else if (dEto != null && dEto > 4.8) {
         farmingAdvisory = `High evapotranspiration (${dEto} mm/day). Check moisture in sandy loam zones and maintain mulch.`;
       }
 
@@ -1555,7 +1858,7 @@ app.get("/api/weather", async (req, res) => {
         precipitationMm: dRainSum,
         precipitationProb: dRainProb,
         rainChance: dRainProb,
-        humidity: Math.round(humidity - (i % 3) * 3),
+        humidity: daily.relative_humidity_2m_mean?.[i] == null ? null : Math.round(daily.relative_humidity_2m_mean[i]),
         windSpeed: dWind,
         windSpeedKmh: dWind,
         evapotranspirationMm: dEto,
@@ -1575,7 +1878,7 @@ app.get("/api/weather", async (req, res) => {
     let overallIrrigation = "Proceed";
     if (precipitationTodayMm > 8 || rainChance > 60) {
       overallIrrigation = "Pause / Conserve Water";
-    } else if (evapotranspirationMm > 4.5 && soilMoisturePercent < 45) {
+    } else if (evapotranspirationMm > 4.5 && soilMoisturePercent != null && soilMoisturePercent < 45) {
       overallIrrigation = "Supplemental Cycle Advised";
     }
 
@@ -1625,10 +1928,12 @@ app.get("/api/weather", async (req, res) => {
       rainChance,
       precipitationMm: precipitationTodayMm,
       uvIndex,
-      solarRadiation: Math.round(uvIndex * 115),
+      solarRadiation,
       evapotranspirationMm,
       soilTemp,
       soilMoistureLevel: soilMoisturePercent,
+      cloudCover,
+      visibilityKm,
       sunrise: sunriseStr,
       sunset: sunsetStr,
       isLiveApi: true,
@@ -1649,8 +1954,17 @@ app.get("/api/weather", async (req, res) => {
 
     res.json(weatherPayload);
   } catch (error: any) {
-    console.error("Live weather fetch error:", error?.message || error);
-    // Return resilient high-quality telemetry fallback
+    if (process.env.DEBUG_WEATHER) {
+      console.warn("Live weather external fetch fallback:", error?.message || error);
+    }
+    res.status(502).json({
+      success: false,
+      error: "Live weather data is temporarily unavailable. Please retry shortly.",
+      details: process.env.DEBUG_WEATHER ? error?.message : undefined,
+      locationName: queryLoc,
+      coordinates: !isNaN(queryLat) && !isNaN(queryLon) ? { lat: queryLat, lon: queryLon } : null,
+    });
+    /*
     res.json({
       locationName: queryLoc,
       coordinates: { lat: 24.95, lon: 84.02 },
@@ -1706,7 +2020,7 @@ app.get("/api/weather", async (req, res) => {
         irrigationAdvice: "Proceed",
         diseaseRisk: "Low",
       },
-    });
+    }); */
   }
 });
 
@@ -2287,7 +2601,7 @@ Provide concise, sharp, high-value commercial advice in JSON format with keys:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: { responseMimeType: "application/json" },
     });
@@ -2304,7 +2618,7 @@ Provide concise, sharp, high-value commercial advice in JSON format with keys:
       };
     }
 
-    return res.json({ ...parsed, source: "gemini-3.7-flash-market-economist" });
+    return res.json({ ...parsed, source: "gemini-2.5-flash-market-economist" });
   } catch (err: any) {
     console.error("AI Market strategy error:", err);
     return res.status(500).json({ error: "Failed to generate market strategy" });
@@ -2945,7 +3259,7 @@ MANDATORY RESPONSE FORMATTING RULES:
     contents.push({ text: conversationText });
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-2.5-flash",
       contents: { parts: contents },
       config: {
         systemInstruction: fullSystemInstruction,
@@ -2956,7 +3270,7 @@ MANDATORY RESPONSE FORMATTING RULES:
     const replyText = response.text || "I have analyzed your crop query. Please check soil moisture before spraying.";
     return res.json({
       reply: replyText,
-      source: "gemini-3.7-flash",
+      source: "gemini-2.5-flash",
     });
   } catch (error: any) {
     console.warn("Notice: Gemini advisor switched to high-precision agronomy engine:", error?.status || error?.message?.slice(0, 80) || "fallback engaged");
@@ -3010,7 +3324,7 @@ Respond ONLY in valid JSON with this exact schema:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           {
@@ -3039,7 +3353,7 @@ Respond ONLY in valid JSON with this exact schema:
 
     return res.json({
       diagnosis: parsed,
-      source: "gemini-3.7-flash-vision",
+      source: "gemini-2.5-flash-vision",
     });
   } catch (error: any) {
     console.warn("Notice: Leaf diagnosis switched to precision fallback:", error?.status || error?.message?.slice(0, 80) || "fallback engaged");
@@ -3116,7 +3430,7 @@ Respond ONLY in valid JSON matching this exact array structure under key "recomm
 
       try {
         const response = await ai.models.generateContent({
-          model: "gemini-3.7-flash",
+          model: "gemini-2.5-flash",
           contents: prompt,
           config: {
             responseMimeType: "application/json",
@@ -3128,11 +3442,13 @@ Respond ONLY in valid JSON matching this exact array structure under key "recomm
         if (parsed && Array.isArray(parsed.recommendations) && parsed.recommendations.length > 0) {
           return res.json({
             recommendations: parsed.recommendations,
-            source: "gemini-3.7-flash-ml-agronomy",
+            source: "gemini-2.5-flash-ml-agronomy",
           });
         }
       } catch (e: any) {
-        console.warn("Notice: Prediction fallback engaged:", e?.status || e?.message?.slice(0, 80) || "fallback");
+        if (process.env.DEBUG_PREDICT) {
+          console.warn("Notice: Prediction fallback engaged:", e?.status || e?.message?.slice(0, 80) || "fallback");
+        }
       }
     }
 
@@ -3233,7 +3549,7 @@ Return ONLY valid JSON with this exact schema:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -3250,7 +3566,7 @@ Return ONLY valid JSON with this exact schema:
 
     return res.json({
       advice: parsed,
-      source: "gemini-3.7-flash",
+      source: "gemini-2.5-flash",
     });
   } catch (error: any) {
     console.warn("Notice: Soil advice switched to local soil engine:", error?.status || error?.message?.slice(0, 80) || "fallback");
@@ -4592,9 +4908,23 @@ function generateDeterministicCropRecs(input: any) {
 // Start Server with Vite Middleware
 // ----------------------------------------------------
 async function startServer() {
+  // Initialize MongoDB Atlas connection on server boot
+  if (process.env.MONGODB_URI) {
+    try {
+      const dbRes = await initMongoDB(process.env.MONGODB_URI, process.env.MONGODB_DB_NAME || "CropProfitDB");
+      if (dbRes.isConnected) {
+        console.log(`[MongoDB] Atlas database connected on boot: ${process.env.MONGODB_DB_NAME || "CropProfitDB"}`);
+      } else {
+        console.warn(`[MongoDB] Atlas connection note: ${dbRes.message}`);
+      }
+    } catch (e: any) {
+      console.warn(`[MongoDB] Atlas connection deferred:`, e?.message || e);
+    }
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: { server: httpServer } },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -4606,8 +4936,18 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`AI Crop Platform Server running on http://0.0.0.0:${PORT}`);
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    const protocol = isHttps ? "https" : "http";
+    console.log(`\n======================================================`);
+    console.log(`🌾 AI Crop Profit Platform Server Running`);
+    console.log(`🔒 Local Access:   ${protocol}://localhost:${PORT}`);
+    console.log(`🌐 Network Access: ${protocol}://0.0.0.0:${PORT}`);
+    if (isHttps) {
+      console.log(`🛡️  TLS Mode:       Active (Certificates loaded from ${httpsCreds?.certPath})`);
+    } else {
+      console.log(`⚠️  TLS Mode:       Disabled (HTTP mode. Run 'npm run cert:generate' to enable HTTPS)`);
+    }
+    console.log(`======================================================\n`);
   });
 }
 

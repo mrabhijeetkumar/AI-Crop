@@ -158,24 +158,41 @@ export function SettingsView() {
   }, [user]);
 
   // Profile Photo Upload
-  const handleImageFileChange = (e) => {
+  const handleImageFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+      alert("Please choose a valid image file.");
+      return;
+    }
     if (file.size > 8 * 1024 * 1024) {
       alert("Please choose an image under 8MB.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        setAvatar(reader.result);
-        setSaveSuccessMsg("Profile photo selected. Click 'Save All Changes' to persist.");
-        setTimeout(() => setSaveSuccessMsg(null), 3500);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxEdge = 640;
+      const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Image processing is unavailable");
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const compressed = canvas.toDataURL("image/jpeg", 0.82);
+      if (compressed.length > 2_800_000) throw new Error("The processed image is still too large");
+      setAvatar(compressed);
+      setSaveSuccessMsg("Profile photo ready. Click 'Save All Changes' to persist it.");
+      setTimeout(() => setSaveSuccessMsg(null), 3500);
+    } catch (error) {
+      console.error("Profile image processing failed:", error);
+      alert("This image could not be processed. Please choose another photo.");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   // GPS Detection
@@ -495,6 +512,7 @@ export function SettingsView() {
                       alt={displayName}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       referrerPolicy="no-referrer"
+                      onError={() => setAvatar("")}
                     />
                   ) : (
                     <div className="w-full h-full bg-slate-100 dark:bg-slate-900 flex flex-col items-center justify-center text-[var(--primary)]">
@@ -544,6 +562,19 @@ export function SettingsView() {
                 <Upload className="w-3 h-3" />
                 <span>Upload</span>
               </button>
+              {avatar && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAvatar("");
+                    setSaveSuccessMsg("Profile photo marked for removal. Click 'Save All Changes' to persist.");
+                  }}
+                  className="ml-2 btn-secondary py-1.5 px-3.5 rounded-full text-[11.5px] font-semibold flex items-center gap-1.5 cursor-pointer text-red-600"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Remove</span>
+                </button>
+              )}
             </div>
           </div>
 

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "dev:vite": "vite",
+    "cert:generate": "node scripts/generate-certs.js",
+    "cert:mkcert": "mkdir -p .certs && mkcert -key-file .certs/localhost-key.pem -cert-file .certs/localhost.pem localhost 127.0.0.1 0.0.0.0 ::1",
     "build": "vite build",
     "build:client": "vite build",
     "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",

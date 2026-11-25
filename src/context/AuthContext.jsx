@@ -1,523 +1,417 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
 const AuthContext = createContext(null);
 
+const KEYS = {
+  user: "agri_user",
+  userId: "agri_user_id",
+  settings: "agri_settings",
+  farm: "agri_farm_profile",
+  token: "agri_ai_token",
+};
+
+const NETWORK_ERROR = "Network error. Please check your internet connection and try again.";
+
+/* ------------------------------------------------------------------ */
+/*  Storage helpers: "Remember me" => localStorage, otherwise          */
+/*  sessionStorage (cleared when the browser is closed).               */
+/* ------------------------------------------------------------------ */
+function safeGet(key) {
+  try {
+    return sessionStorage.getItem(key) ?? localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function readJSON(key) {
+  try {
+    const raw = safeGet(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeKey(key, value, remember) {
+  try {
+    const main = remember ? localStorage : sessionStorage;
+    const other = remember ? sessionStorage : localStorage;
+    other.removeItem(key);
+    if (value === null || value === undefined) main.removeItem(key);
+    else main.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+  } catch {
+    /* storage unavailable (private mode / quota) */
+  }
+}
+
+function removeFromBoth(keys) {
+  keys.forEach((k) => {
+    try { localStorage.removeItem(k); } catch { /* ignore */ }
+    try { sessionStorage.removeItem(k); } catch { /* ignore */ }
+  });
+}
+
+const LEGACY_LOCAL_KEYS = [
+  "aicrop_farm_profile",
+  "aicrop_fields",
+  "aicrop_activities",
+  "aicrop_tab",
+  "aicrop_advisor_sessions",
+  "aicrop_diagnoses",
+  "aicrop_market_api_key",
+  "aicrop_prescriptions",
+  "aicrop_notifications",
+];
+
+function wipeLocalData({ includeSnapshots = false } = {}) {
+  removeFromBoth([...Object.values(KEYS), ...LEGACY_LOCAL_KEYS]);
+  if (includeSnapshots) {
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("aicrop_snapshot_"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tiny fetch wrapper: always returns { ok, status, data }            */
+/* ------------------------------------------------------------------ */
+async function request(url, { method = "GET", body, token } = {}) {
+  try {
+    const headers = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    let data = {};
+    try { data = await res.json(); } catch { data = {}; }
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return { ok: false, status: 0, data: { success: false, error: NETWORK_ERROR } };
+  }
+}
+
 export function AuthProvider({ children }) {
-  // Initialize with null or saved authenticated session
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem("agri_user");
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [settings, setSettings] = useState(() => {
-    try {
-      const saved = localStorage.getItem("agri_settings");
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [farmProfile, setFarmProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem("agri_farm_profile");
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem("agri_ai_token") || null;
-  });
+  const [token, setToken] = useState(() => safeGet(KEYS.token));
+  const [user, setUser] = useState(() => (safeGet(KEYS.token) ? readJSON(KEYS.user) : null));
+  const [settings, setSettings] = useState(() => (safeGet(KEYS.token) ? readJSON(KEYS.settings) : null));
+  const [farmProfile, setFarmProfile] = useState(() => (safeGet(KEYS.token) ? readJSON(KEYS.farm) : null));
 
   const [dbTelemetry, setDbTelemetry] = useState({
-    isConnected: true,
-    databaseName: "agri_crop_db",
-    uriMasked: "Real-Time Cloud Persistence Ready",
-    collections: ["users", "user_settings", "farm_profiles", "audit_logs", "user_sessions"],
-    counts: { users: 1, userSettings: 1, farmProfiles: 1, auditLogs: 5, farmFields: 6 },
-    mode: "Realtime Cloud Database Sync",
+    isConnected: false,
+    databaseName: "",
+    uriMasked: "Checking connection...",
+    collections: [],
+    counts: { users: 0, userSettings: 0, farmProfiles: 0, auditLogs: 0, farmFields: 0 },
+    mode: "Checking database connection...",
   });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSavedTime, setLastSavedTime] = useState(new Date().toLocaleTimeString());
-  
-  // Auth Modal State for Switching / Creating Accounts
-  const [activeUserModal, setActiveUserModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState("login"); // 'login' | 'signup'
+  const [lastSavedTime, setLastSavedTime] = useState(() => new Date().toLocaleTimeString());
 
+  // Auth modal (switch / create account)
+  const [activeUserModal, setActiveUserModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState("login");
   const openAuthModal = useCallback((mode = "login") => {
     setAuthModalMode(mode);
     setActiveUserModal(true);
   }, []);
+  const closeAuthModal = useCallback(() => setActiveUserModal(false), []);
 
-  const closeAuthModal = useCallback(() => {
-    setActiveUserModal(false);
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+  const rememberRef = useRef(
+    (() => {
+      try { return !sessionStorage.getItem(KEYS.token); } catch { return true; }
+    })()
+  );
+
+  const touchSaved = () => setLastSavedTime(new Date().toLocaleTimeString());
+
+  const clearSession = useCallback(() => {
+    setUser(null);
+    setSettings(null);
+    setFarmProfile(null);
+    setToken(null);
   }, []);
 
-  // Sync state to local storage when changed
+  // Keep browser storage in sync with state
   useEffect(() => {
-    try {
-      if (user) {
-        localStorage.setItem("agri_user", JSON.stringify(user));
-        localStorage.setItem("agri_user_id", user.id);
-      } else {
-        localStorage.removeItem("agri_user");
-        localStorage.removeItem("agri_user_id");
-      }
+    const remember = rememberRef.current;
+    writeKey(KEYS.token, token, remember);
+    writeKey(KEYS.user, token ? user : null, remember);
+    writeKey(KEYS.userId, token && user ? user.id : null, remember);
+    writeKey(KEYS.settings, token ? settings : null, remember);
+    writeKey(KEYS.farm, token ? farmProfile : null, remember);
+  }, [token, user, settings, farmProfile]);
 
-      if (settings) {
-        localStorage.setItem("agri_settings", JSON.stringify(settings));
-      } else {
-        localStorage.removeItem("agri_settings");
-      }
+  /** Authenticated request. Logs the user out automatically when the server says the session is invalid. */
+  const call = useCallback(
+    async (url, opts = {}) => {
+      const sent = tokenRef.current;
+      const result = await request(url, { ...opts, token: sent });
+      if (result.status === 401 && sent && sent === tokenRef.current) clearSession();
+      return result;
+    },
+    [clearSession]
+  );
 
-      if (farmProfile) {
-        localStorage.setItem("agri_farm_profile", JSON.stringify(farmProfile));
-      } else {
-        localStorage.removeItem("agri_farm_profile");
-      }
+  /** Raw authenticated fetch for other components (adds the Bearer token). */
+  const authFetch = useCallback(
+    async (url, options = {}) => {
+      const sent = tokenRef.current;
+      const headers = { ...(options.headers || {}), ...(sent ? { Authorization: `Bearer ${sent}` } : {}) };
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401 && sent && sent === tokenRef.current) clearSession();
+      return res;
+    },
+    [clearSession]
+  );
 
-      if (token) {
-        localStorage.setItem("agri_ai_token", token);
-      } else {
-        localStorage.removeItem("agri_ai_token");
-      }
-    } catch (e) {
-      console.warn("Storage sync note:", e);
-    }
-  }, [user, settings, farmProfile, token]);
+  const applyAuth = (data, remember) => {
+    rememberRef.current = remember;
+    setUser(data.user);
+    setSettings(data.settings || null);
+    setFarmProfile(data.farmProfile || null);
+    setToken(data.token);
+  };
 
-  // Fetch verified user state from MongoDB on mount or user change
+  /* ---------------- verify session with server ---------------- */
   const refreshUserAuth = useCallback(async () => {
-    const activeUserId = user?.id || localStorage.getItem("agri_user_id");
-    if (!activeUserId) {
-      // If no active user, check DB status only
-      try {
-        const dbRes = await fetch("/api/db/status");
-        if (dbRes.ok) {
-          const dbData = await dbRes.json();
-          setDbTelemetry(dbData);
-        }
-      } catch (e) {
-        // quiet
-      }
+    if (!tokenRef.current) {
+      const res = await request("/api/db/status");
+      if (res.ok) setDbTelemetry((prev) => ({ ...prev, ...res.data }));
       return;
     }
-
-    try {
-      const res = await fetch(`/api/auth/me?userId=${activeUserId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) setUser(data.user);
-        if (data.settings) setSettings(data.settings);
-        if (data.farmProfile) setFarmProfile(data.farmProfile);
-        if (data.database) setDbTelemetry(data.database);
-        if (data.token && !token) setToken(data.token);
-      } else if (res.status === 404) {
-        // User was deleted on server
-        setUser(null);
-        setSettings(null);
-        setFarmProfile(null);
-        setToken(null);
-      }
-    } catch (e) {
-      console.warn("Real-time auth sync fetch note:", e);
+    const res = await call("/api/auth/me");
+    if (res.ok && res.data.user) {
+      setUser(res.data.user);
+      if (res.data.settings) setSettings(res.data.settings);
+      if (res.data.farmProfile) setFarmProfile(res.data.farmProfile);
+      if (res.data.database) setDbTelemetry(res.data.database);
     }
-  }, [user?.id, token]);
+  }, [call]);
 
   useEffect(() => {
     refreshUserAuth();
-  }, [refreshUserAuth]);
+  }, [token, refreshUserAuth]);
 
-  // ----------------------------------------------------
-  // Realtime Actions with Automatic MongoDB Persistence
-  // ----------------------------------------------------
-
-  const updateUser = async (updatedFields) => {
+  /* ---------------- sign up / login / logout ---------------- */
+  const signup = async (formData) => {
     setIsSaving(true);
-    const userId = user?.id || `usr_${Date.now()}`;
-    const newUserData = {
-      ...(user || {}),
-      ...updatedFields,
-      id: userId,
-      updatedAt: new Date().toISOString(),
-    };
-    setUser(newUserData);
-
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUserData),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.user) setUser(result.user);
-        setLastSavedTime(new Date().toLocaleTimeString());
-        return { success: true, user: result.user || newUserData };
+      const res = await request("/api/auth/signup", { method: "POST", body: formData });
+      if (res.ok && res.data.success && res.data.user && res.data.token) {
+        applyAuth(res.data, true);
+        return res.data;
       }
-      return { success: false, error: "Failed to update profile in database" };
-    } catch (err) {
-      console.error("Save user error:", err);
-      return { success: false, error: err?.message || "Network error" };
+      return { success: false, error: res.data.error || "Registration failed. Please try again.", field: res.data.field };
     } finally {
       setIsSaving(false);
     }
   };
 
-  const updateProfile = async (payload) => {
-    return await updateUser(payload);
+  const login = async (identifier, password, remember = true) => {
+    setIsSaving(true);
+    try {
+      const res = await request("/api/auth/login", {
+        method: "POST",
+        body: { identifier: String(identifier || "").trim(), password, remember },
+      });
+      if (res.ok && res.data.success && res.data.user && res.data.token) {
+        applyAuth(res.data, remember);
+        return res.data;
+      }
+      return { success: false, error: res.data.error || "Unable to sign in. Please try again." };
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const forgotPassword = async (email) => {
+    const res = await request("/api/auth/forgot-password", { method: "POST", body: { email: String(email || "").trim() } });
+    return res.ok ? res.data : { success: false, error: res.data.error || "Could not process the request." };
+  };
+
+  const resetPassword = async (email, code, newPassword) => {
+    const res = await request("/api/auth/reset-password", {
+      method: "POST",
+      body: { email: String(email || "").trim(), code: String(code || "").trim(), newPassword },
+    });
+    return res.ok ? res.data : { success: false, error: res.data.error || "Password reset failed." };
+  };
+
+  const logout = async () => {
+    if (tokenRef.current) await call("/api/auth/logout", { method: "POST" }); // best effort
+    clearSession();
+    wipeLocalData();
+  };
+
+  /* ---------------- profile / settings (server first) ---------------- */
+  const updateUser = async (fields) => {
+    setIsSaving(true);
+    try {
+      const res = await call("/api/user/profile", { method: "PUT", body: { ...fields, id: user?.id } });
+      if (res.ok && res.data.user) {
+        setUser(res.data.user);
+        touchSaved();
+        return { success: true, user: res.data.user };
+      }
+      return { success: false, error: res.data.error || "Failed to update profile." };
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateProfile = (payload) => updateUser(payload);
 
   const updateAvatar = async (avatarUrlOrBase64) => {
+    const previous = user?.avatar || "";
     setIsSaving(true);
-    setUser((prev) => (prev ? { ...prev, avatar: avatarUrlOrBase64 } : null));
-
-    if (!user?.id) {
-      setIsSaving(false);
-      return;
-    }
-
+    setUser((prev) => (prev ? { ...prev, avatar: avatarUrlOrBase64 } : prev)); // optimistic
     try {
-      const res = await fetch("/api/user/avatar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, avatar: avatarUrlOrBase64 }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.avatar) {
-          setUser((prev) => (prev ? { ...prev, avatar: data.avatar } : null));
-        }
-        setLastSavedTime(new Date().toLocaleTimeString());
+      const res = await call("/api/user/avatar", { method: "POST", body: { userId: user?.id, avatar: avatarUrlOrBase64 } });
+      if (res.ok && res.data.success) {
+        setUser((prev) => (prev ? { ...prev, avatar: res.data.avatar || "" } : prev));
+        touchSaved();
+        return { success: true };
       }
-    } catch (err) {
-      console.error("Save avatar error:", err);
+      setUser((prev) => (prev ? { ...prev, avatar: previous } : prev)); // rollback
+      return { success: false, error: res.data.error || "Failed to save photo." };
     } finally {
       setIsSaving(false);
     }
   };
 
-  const updateSettings = async (updatedSettingsFields) => {
+  const updateSettings = async (fields) => {
+    const previous = settings;
     setIsSaving(true);
-    const userId = user?.id || "usr_guest";
-    const newSettings = {
-      ...(settings || {}),
-      ...updatedSettingsFields,
-      userId,
-      updatedAt: new Date().toISOString(),
-    };
-    setSettings(newSettings);
-
+    setSettings((prev) => ({ ...(prev || {}), ...fields })); // optimistic
     try {
-      const res = await fetch("/api/user/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newSettings, userId }),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.settings) setSettings(result.settings);
-        setLastSavedTime(new Date().toLocaleTimeString());
+      const res = await call("/api/user/settings", { method: "PUT", body: fields });
+      if (res.ok && res.data.settings) {
+        setSettings(res.data.settings);
+        touchSaved();
+        return { success: true };
       }
-    } catch (err) {
-      console.error("Save settings error:", err);
+      setSettings(previous);
+      return { success: false, error: res.data.error || "Failed to save settings." };
     } finally {
       setIsSaving(false);
     }
   };
 
-  const updateFarmProfile = async (updatedFarmFields) => {
+  const updateFarmProfile = async (fields) => {
+    const previous = farmProfile;
     setIsSaving(true);
-    const userId = user?.id || "usr_guest";
-    const newFarm = {
-      ...(farmProfile || {}),
-      ...updatedFarmFields,
-      userId,
-      updatedAt: new Date().toISOString(),
-    };
-    setFarmProfile(newFarm);
-
+    setFarmProfile((prev) => ({ ...(prev || {}), ...fields })); // optimistic
     try {
-      const res = await fetch("/api/user/farm-profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newFarm, userId }),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.farmProfile) setFarmProfile(result.farmProfile);
-        setLastSavedTime(new Date().toLocaleTimeString());
+      const res = await call("/api/user/farm-profile", { method: "PUT", body: fields });
+      if (res.ok && res.data.farmProfile) {
+        setFarmProfile(res.data.farmProfile);
+        touchSaved();
+        return { success: true };
       }
-    } catch (err) {
-      console.error("Save farm profile error:", err);
+      setFarmProfile(previous);
+      return { success: false, error: res.data.error || "Failed to save farm profile." };
     } finally {
       setIsSaving(false);
     }
   };
 
+  /* ---------------- security ---------------- */
   const updatePassword = async (currentPassword, newPassword) => {
-    if (!user?.id) return { success: false, error: "Please sign in first" };
     setIsSaving(true);
     try {
-      const res = await fetch("/api/user/security/password", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      setLastSavedTime(new Date().toLocaleTimeString());
-      return data;
-    } catch (err) {
-      return { success: false, error: "Network error updating credentials" };
+      const res = await call("/api/user/security/password", { method: "PUT", body: { currentPassword, newPassword } });
+      if (res.ok) touchSaved();
+      return res.ok ? res.data : { success: false, error: res.data.error || "Could not update password." };
     } finally {
       setIsSaving(false);
     }
   };
 
   const toggle2FA = async (enabled) => {
-    if (!user?.id) return { success: false, error: "Please sign in first" };
     setIsSaving(true);
     try {
-      const res = await fetch("/api/user/security/2fa", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, enabled }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser((prev) => (prev ? { ...prev, twoFactorEnabled: Boolean(enabled) } : null));
+      const res = await call("/api/user/security/2fa", { method: "PUT", body: { enabled } });
+      if (res.ok) {
+        setUser((prev) => (prev ? { ...prev, twoFactorEnabled: Boolean(enabled) } : prev));
+        touchSaved();
+        return res.data;
       }
-      setLastSavedTime(new Date().toLocaleTimeString());
-      return data;
-    } catch (err) {
-      return { success: false, error: "Network error updating 2FA" };
+      return { success: false, error: res.data.error || "Could not update 2FA." };
     } finally {
       setIsSaving(false);
     }
   };
 
-  const connectMongoDB = async (mongoUri, dbName) => {
-    setIsSaving(true);
-    try {
-      const res = await fetch("/api/db/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mongoUri, dbName }),
-      });
-      const data = await res.json();
-      if (data.stats) {
-        setDbTelemetry(data.stats);
-      }
-      refreshUserAuth();
-      return data;
-    } catch (err) {
-      return { success: false, message: "Failed to connect to MongoDB endpoint." };
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  /* ---------------- database ---------------- */
+  // The Mongo connection string now lives only in the server .env (MONGODB_URI).
+  // Letting the browser re-point the database was a security hole, so the endpoint was removed.
+  const connectMongoDB = async () => ({
+    success: false,
+    message: "The database is configured on the server using MONGODB_URI in the .env file.",
+  });
 
   const syncAllToMongoDB = async () => {
-    if (!user?.id) return { success: false, message: "No active user session to sync" };
-    setIsSaving(true);
-    try {
-      const res = await fetch("/api/db/sync-all", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const data = await res.json();
-      if (data.databaseTelemetry) {
-        setDbTelemetry(data.databaseTelemetry);
-      }
-      setLastSavedTime(new Date().toLocaleTimeString());
-      return data;
-    } catch (err) {
-      return { success: false, message: "Sync failed" };
-    } finally {
-      setIsSaving(false);
+    const res = await call("/api/db/sync-all", { method: "POST", body: {} });
+    if (res.ok && res.data.databaseTelemetry) {
+      setDbTelemetry(res.data.databaseTelemetry);
+      touchSaved();
+      return res.data;
     }
+    return { success: false, message: res.data.error || "Sync failed" };
   };
 
   const refreshDbStatus = async () => {
-    try {
-      const res = await fetch("/api/db/status");
-      if (res.ok) {
-        const stats = await res.json();
-        setDbTelemetry(stats);
-      }
-    } catch (err) {
-      console.warn("DB status check note:", err);
-    }
+    const res = await call("/api/db/status");
+    if (res.ok) setDbTelemetry((prev) => ({ ...prev, ...res.data }));
   };
 
-  const login = async (email, password) => {
-    setIsSaving(true);
+  const downloadBackup = async () => {
+    const res = await call("/api/user/backup");
+    if (!res.ok) return { success: false, error: res.data.error || "Failed to download farm data archive" };
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: (email || "").trim(), password }),
-      });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        if (data.settings) setSettings(data.settings);
-        if (data.farmProfile) setFarmProfile(data.farmProfile);
-        if (data.token) setToken(data.token);
-      }
-      return { ...data, error: data.error || data.detail };
-    } catch (err) {
-      return { success: false, error: "Login failed" };
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const signup = async (formData) => {
-    setIsSaving(true);
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        if (data.settings) setSettings(data.settings);
-        if (data.farmProfile) setFarmProfile(data.farmProfile);
-        if (data.token) setToken(data.token);
-      }
-      return { ...data, error: data.error || data.detail };
-    } catch (err) {
-      return { success: false, error: "Registration failed" };
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const wipeAllLocalStorage = () => {
-    const keysToPurge = [
-      "agri_user",
-      "agri_user_id",
-      "agri_settings",
-      "agri_farm_profile",
-      "agri_ai_token",
-      "aicrop_farm_profile",
-      "aicrop_fields",
-      "aicrop_activities",
-      "aicrop_tab",
-      "aicrop_advisor_sessions",
-      "aicrop_diagnoses",
-      "aicrop_market_api_key",
-      "aicrop_prescriptions",
-      "aicrop_notifications",
-    ];
-    keysToPurge.forEach((k) => localStorage.removeItem(k));
-  };
-
-  const logout = async () => {
-    const currentUserId = user?.id;
-    try {
-      if (currentUserId) {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: currentUserId }),
-        });
-      }
-    } catch (e) {
-      // quiet
-    }
-    setUser(null);
-    setSettings(null);
-    setFarmProfile(null);
-    setToken(null);
-    wipeAllLocalStorage();
-  };
-
-  const downloadBackup = async (targetUserId) => {
-    const uid = targetUserId || user?.id || "usr_abhijeet_01";
-    try {
-      const res = await fetch(`/api/user/backup?userId=${uid}`);
-      if (!res.ok) throw new Error("Failed to download backup");
-      const data = await res.json();
-      
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `smart_agriculture_farm_backup_${uid}_${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `ai_crop_profit_backup_${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      return { success: true, data };
-    } catch (err) {
-      console.error("Backup export error:", err);
-      return { success: false, error: "Failed to download farm data archive" };
+      return { success: true, data: res.data };
+    } catch {
+      return { success: false, error: "Failed to save the backup file." };
     }
   };
 
+  /** options: { password, confirmationPhrase, backupRequested } */
   const deleteAccount = async (options = {}) => {
-    const targetUserId = options.userId || user?.id;
-    if (!targetUserId) return { success: false, error: "No active user ID found to delete." };
-
+    if (!tokenRef.current) return { success: false, error: "Please sign in first." };
     setIsSaving(true);
     try {
-      const res = await fetch("/api/user/account/delete", {
+      const res = await call("/api/user/account/delete", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
+        body: {
+          password: options.password || "",
+          confirmationPhrase: options.confirmationPhrase || "",
+          backupRequested: Boolean(options.backupRequested),
         },
-        body: JSON.stringify({
-          userId: targetUserId,
-          confirmationPhrase: options.confirmationPhrase || "DELETE",
-          backupRequested: options.backupRequested || false,
-        }),
       });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setUser(null);
-        setSettings(null);
-        setFarmProfile(null);
-        setToken(null);
-        wipeAllLocalStorage();
-        return {
-          success: true,
-          message: data.message || "Account permanently wiped from MongoDB.",
-          deletedStats: data.deletedStats,
-        };
+      if (res.ok && res.data.success) {
+        clearSession();
+        wipeLocalData({ includeSnapshots: true });
+        return { success: true, message: res.data.message, deletedStats: res.data.deletedStats, backupData: res.data.backupData };
       }
-      return { success: false, error: data.error || data.message || "Failed to delete account" };
-    } catch (err) {
-      console.error("Account deletion network error:", err);
-      // Fallback try with DELETE method
-      try {
-        const delRes = await fetch(`/api/user/account?userId=${targetUserId}`, { method: "DELETE" });
-        const delData = await delRes.json();
-        if (delRes.ok && delData.success) {
-          setUser(null);
-          setSettings(null);
-          setFarmProfile(null);
-          setToken(null);
-          wipeAllLocalStorage();
-          return { success: true, message: delData.message };
-        }
-      } catch (fallbackErr) {
-        // silence
-      }
-      return { success: false, error: "Network error occurred while contacting MongoDB server." };
+      return { success: false, error: res.data.error || "Failed to delete account." };
     } finally {
       setIsSaving(false);
     }
@@ -533,12 +427,13 @@ export function AuthProvider({ children }) {
         dbTelemetry,
         isSaving,
         lastSavedTime,
-        isAuthenticated: Boolean(user && user.id),
+        isAuthenticated: Boolean(user && user.id && token),
         activeUserModal,
         setActiveUserModal,
         authModalMode,
         openAuthModal,
         closeAuthModal,
+        authFetch,
         updateUser,
         updateProfile,
         updateAvatar,
@@ -552,6 +447,8 @@ export function AuthProvider({ children }) {
         refreshUserAuth,
         login,
         signup,
+        forgotPassword,
+        resetPassword,
         logout,
         downloadBackup,
         deleteAccount,
@@ -564,8 +461,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

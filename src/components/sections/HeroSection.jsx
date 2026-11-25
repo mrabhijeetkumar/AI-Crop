@@ -1,8 +1,36 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowRight, Play, Sprout } from "lucide-react";
 
 export function HeroSection({ onOpenCropStudio }) {
   const [showDemoModal, setShowDemoModal] = useState(false);
+
+  // Modal open hone par body scrollbar hide/show se page width jump karta tha,
+  // jiski wajah se right-side scroll line blink karti thi. Width preserve karke
+  // scroll lock karne se layout stable rehta hai.
+  useEffect(() => {
+    if (!showDemoModal) return undefined;
+
+    const body = document.body;
+    const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+
+    body.style.overflow = "hidden";
+    if (scrollBarWidth > 0) {
+      body.style.paddingRight = `${scrollBarWidth}px`;
+    }
+
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setShowDemoModal(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [showDemoModal]);
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -18,38 +46,67 @@ export function HeroSection({ onOpenCropStudio }) {
     <section
       id="hero"
       aria-label="Precision Agriculture Hero"
-      className="relative w-full min-h-[380px] lg:h-[395px] rounded-[22px] overflow-hidden border border-slate-200/90 dark:border-slate-800 shadow-xs bg-[#F8FAFC] dark:bg-slate-900 flex flex-col lg:flex-row items-stretch"
+      className="relative isolate w-full min-h-[500px] lg:h-[500px] rounded-[22px] overflow-hidden border border-slate-200/90 dark:border-slate-800 shadow-[0_18px_45px_-30px_rgba(15,23,42,.6)] bg-[#F0FDF4] dark:bg-slate-900"
+      style={{ scrollbarGutter: "stable" }}
     >
-      {/* ================= 1. LEFT TEXT SECTION (45%) ================= */}
-      <div className="w-full lg:w-[46%] xl:w-[44%] p-7 sm:p-9 lg:p-11 xl:p-12 flex flex-col justify-center text-left z-10 relative bg-gradient-to-br from-[#F0FDF4] via-[#FAFDF9] to-[#F8FAFC] dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
-        {/* Subtle Category Pill */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/80 dark:bg-emerald-950/70 border border-emerald-200/90 dark:border-emerald-800 text-[10.5px] font-bold text-[#15803D] dark:text-emerald-400 tracking-wider uppercase mb-3.5 shadow-2xs w-fit">
-          <Sprout className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>PRECISION AGRICULTURE PLATFORM</span>
+      {/* ================= 1. FULL BLEED PHOTO + FEATHERED FOG ================= */}
+      <img
+        src="/images/farmer-hero-bg.png"
+        alt="Indian farmer using smartphone in lush agricultural field"
+        fetchPriority="high"
+        loading="eager"
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+      />
+      <div
+        className="absolute inset-0 hidden pointer-events-none z-[1] lg:block"
+        style={{
+          background: `linear-gradient(90deg,
+            rgba(240,253,244,.99) 0%,
+            rgba(240,253,244,.97) 18%,
+            rgba(240,253,244,.86) 30%,
+            rgba(240,253,244,.60) 42%,
+            rgba(240,253,244,.25) 55%,
+            rgba(240,253,244,.06) 67%,
+            transparent 79%),
+            linear-gradient(180deg, rgba(255,255,255,.10), transparent 32%, rgba(15,23,42,.08) 100%)`,
+        }}
+      />
+      <div className="absolute inset-0 z-[1] hidden dark:block pointer-events-none bg-[linear-gradient(90deg,rgba(2,6,23,.98)_0%,rgba(2,6,23,.94)_24%,rgba(2,6,23,.70)_42%,rgba(2,6,23,.28)_60%,transparent_80%)]" />
+      <div className="absolute inset-0 z-[1] pointer-events-none lg:hidden bg-[linear-gradient(180deg,rgba(240,253,244,.98)_0%,rgba(240,253,244,.92)_48%,rgba(240,253,244,.45)_78%,rgba(240,253,244,.10)_100%)] dark:bg-[linear-gradient(180deg,rgba(2,6,23,.98)_0%,rgba(2,6,23,.90)_52%,rgba(2,6,23,.42)_82%,rgba(2,6,23,.12)_100%)]" />
+
+      {/* ================= 2. TEXT CONTENT ================= */}
+      <div className="relative z-10 flex min-h-[500px] w-full lg:w-[57%] flex-col justify-center p-7 text-left sm:p-9 lg:p-12 xl:p-14">
+        {/* Subtle Category Badge */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/80 dark:border-emerald-800 text-xs font-semibold text-[#15803D] dark:text-emerald-400 mb-3.5 w-fit">
+          <Sprout className="w-3.5 h-3.5 stroke-[2.2]" />
+          <span>Precision Agriculture Platform</span>
         </div>
 
         {/* Main Headline */}
-        <h1 className="text-3xl sm:text-4xl lg:text-[38px] xl:text-[42px] font-extrabold font-heading text-[#0F172A] dark:text-white leading-[1.14] tracking-tight mb-3">
-          Smart Farming. Better Decisions. <br className="hidden sm:inline" />
-          <span className="text-[#15803D] dark:text-emerald-400">
+        <h1 className="text-[36px] sm:text-[42px] lg:text-[46px] xl:text-[52px] font-bold font-heading text-[#0F172A] dark:text-white leading-[1.08] tracking-[-0.035em] mb-4">
+          <span className="block">Smart Farming.</span>
+          <span className="block">Better Decisions.</span>
+          <span className="block text-[#15803D] dark:text-emerald-400">
             Higher Profit.
           </span>
         </h1>
 
         {/* Short Subtitle */}
-        <p className="text-sm sm:text-[15px] text-[#64748B] dark:text-slate-300 font-normal leading-relaxed max-w-[460px] mb-6">
-          Your intelligent farming companion to optimize crop selection, monitor farm health and maximize agricultural profitability.
+        <p className="text-sm sm:text-[15px] text-[#475569] dark:text-slate-300 font-normal leading-[1.65] max-w-[500px] mb-7">
+          Your intelligent farming companion to optimize crop selection, monitor
+          farm health, and maximize agricultural profitability.
         </p>
 
-        {/* Modern 44-48px CTA Buttons */}
-        <div className="flex flex-wrap items-center gap-3.5">
+        {/* Modern Restrained CTA Buttons */}
+        <div className="flex flex-wrap items-center gap-3">
           {/* Primary CTA */}
           <button
             onClick={() => {
               if (onOpenCropStudio) onOpenCropStudio();
               else scrollTo("crop-recommendations");
             }}
-            className="h-11 sm:h-12 px-6 sm:px-7 rounded-full bg-[#15803D] hover:bg-[#16A34A] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-all duration-150 cursor-pointer group active:scale-[0.98]"
+            className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl bg-[#15803D] hover:bg-[#16A34A] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all duration-150 cursor-pointer group active:scale-[0.98]"
           >
             <span>Explore AI Features</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
@@ -58,59 +115,14 @@ export function HeroSection({ onOpenCropStudio }) {
           {/* Secondary CTA: Watch Demo */}
           <button
             onClick={() => setShowDemoModal(true)}
-            className="h-11 sm:h-12 px-5 sm:px-6 rounded-full border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-800 hover:bg-white text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 shadow-2xs transition-all duration-150 cursor-pointer active:scale-[0.98]"
+            className="h-11 sm:h-12 px-5 sm:px-6 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-800 hover:bg-white text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer active:scale-[0.98]"
           >
-            <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-emerald-950 text-[#15803D] dark:text-emerald-400 flex items-center justify-center">
+            <div className="w-5 h-5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-[#15803D] dark:text-emerald-400 flex items-center justify-center">
               <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
             </div>
             <span>Watch Demo</span>
           </button>
         </div>
-      </div>
-
-      {/* ================= 2. RIGHT IMAGE SECTION (55%) ================= */}
-      <div className="w-full lg:w-[54%] xl:w-[56%] relative min-h-[260px] sm:min-h-[320px] lg:min-h-full overflow-hidden flex-1 bg-emerald-50 dark:bg-slate-900">
-        {/* Crisp Natural Farmer Photography */}
-        <img
-          src="/images/farmer-hero-hd.jpg"
-          alt="Indian farmer using smartphone in lush agricultural field"
-          fetchPriority="high"
-          loading="eager"
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover object-[78%_top] sm:object-[82%_top] lg:object-[86%_top] pointer-events-none select-none"
-        />
-
-        {/* Soft edge blend on left boundary (desktop only, doesn't touch the farmer) */}
-        <div
-          className="hidden lg:block absolute inset-y-0 left-0 w-28 pointer-events-none z-5"
-          style={{
-            background:
-              "linear-gradient(90deg, #F8FAFC 0%, rgba(248, 250, 252, 0.85) 35%, rgba(248, 250, 252, 0.3) 70%, transparent 100%)",
-          }}
-        />
-        <div
-          className="hidden lg:dark:block absolute inset-y-0 left-0 w-28 pointer-events-none z-5"
-          style={{
-            background:
-              "linear-gradient(90deg, #0F172A 0%, rgba(15, 23, 42, 0.85) 35%, rgba(15, 23, 42, 0.3) 70%, transparent 100%)",
-          }}
-        />
-
-        {/* Mobile top edge blend */}
-        <div
-          className="lg:hidden absolute inset-x-0 top-0 h-10 pointer-events-none z-5"
-          style={{
-            background:
-              "linear-gradient(180deg, #F8FAFC 0%, transparent 100%)",
-          }}
-        />
-        <div
-          className="lg:hidden dark:block hidden absolute inset-x-0 top-0 h-10 pointer-events-none z-5"
-          style={{
-            background:
-              "linear-gradient(180deg, #0F172A 0%, transparent 100%)",
-          }}
-        />
       </div>
 
       {/* ================= 5. DEMO MODAL ================= */}
@@ -136,8 +148,10 @@ export function HeroSection({ onOpenCropStudio }) {
                   100% Grounded Smart Precision Agriculture
                 </h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
-                  1. Real-time satellite &amp; soil health audit.<br />
-                  2. APMC mandi wholesale rate projections.<br />
+                  1. Real-time satellite &amp; soil health audit.
+                  <br />
+                  2. APMC mandi wholesale rate projections.
+                  <br />
                   3. Precision leaf disease diagnosis in &lt; 45ms.
                 </p>
               </div>

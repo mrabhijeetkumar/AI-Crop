@@ -1,0 +1,7 @@
+{
+  "model_name": "SoilHealthIndexRegressor",
+  "version": "1.1.0",
+  "framework": "scikit-learn",
+  "input_features": ["nitrogen", "phosphorus", "potassium", "ph", "organic_carbon", "electrical_conductivity"],
+  "r2_score": 0.945
+}

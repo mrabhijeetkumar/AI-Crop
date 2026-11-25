@@ -1,0 +1,65 @@
+{
+  "model_name": "IndianCropYieldHistGradientBoostingRegressor",
+  "version": "2.2.0",
+  "framework": "scikit-learn",
+  "algorithm": "HistGradientBoostingRegressor",
+  "categorical_features": [
+    "crop",
+    "season",
+    "state"
+  ],
+  "numeric_features": [
+    "area_acres",
+    "rainfall_mm",
+    "temp_c",
+    "humidity_pct",
+    "soil_n",
+    "soil_p",
+    "soil_k",
+    "soil_ph"
+  ],
+  "supported_crops": [
+    "Chickpea (Gram)",
+    "Cotton",
+    "Maize",
+    "Mustard",
+    "Potato",
+    "Rice",
+    "Soybean",
+    "Sugarcane",
+    "Tomato",
+    "Wheat"
+  ],
+  "supported_states": [
+    "Andhra Pradesh",
+    "Bihar",
+    "Gujarat",
+    "Haryana",
+    "Karnataka",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Tamil Nadu",
+    "Telangana",
+    "Uttar Pradesh",
+    "West Bengal"
+  ],
+  "metrics": {
+    "test_r2_score": 0.9935,
+    "test_mae_qtl_per_acre": 4.1109,
+    "test_rmse_qtl_per_acre": 7.4396,
+    "cv_5fold_r2_mean": 0.9937,
+    "cv_5fold_r2_std": 0.0006
+  },
+  "dataset_summary": {
+    "total_samples": 3200,
+    "train_samples": 2560,
+    "test_samples": 640,
+    "mean_yield_qtl": 66.4,
+    "std_yield_qtl": 92.23
+  },
+  "model_file": "yield_prediction_pipeline.joblib",
+  "status": "trained_and_verified"
+}

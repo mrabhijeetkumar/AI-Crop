@@ -1,0 +1,306 @@
+{
+  "0": {
+    "crop": "Apple",
+    "disease_name": "Apple Scab",
+    "is_healthy": false,
+    "pathogen": "Venturia inaequalis (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "1": {
+    "crop": "Apple",
+    "disease_name": "Black Rot",
+    "is_healthy": false,
+    "pathogen": "Botryosphaeria obtusa (Fungus)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "2": {
+    "crop": "Apple",
+    "disease_name": "Cedar Apple Rust",
+    "is_healthy": false,
+    "pathogen": "Gymnosporangium juniperi-virginianae (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "3": {
+    "crop": "Apple",
+    "disease_name": "Healthy Apple Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "4": {
+    "crop": "Maize",
+    "disease_name": "Cercospora Leaf Spot (Gray Leaf Spot)",
+    "is_healthy": false,
+    "pathogen": "Cercospora zeae-maydis (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "5": {
+    "crop": "Maize",
+    "disease_name": "Common Rust",
+    "is_healthy": false,
+    "pathogen": "Puccinia sorghi (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "6": {
+    "crop": "Maize",
+    "disease_name": "Northern Leaf Blight",
+    "is_healthy": false,
+    "pathogen": "Exserohilum turcicum (Fungus)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "7": {
+    "crop": "Maize",
+    "disease_name": "Healthy Maize Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "8": {
+    "crop": "Potato",
+    "disease_name": "Early Blight",
+    "is_healthy": false,
+    "pathogen": "Alternaria solani (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "9": {
+    "crop": "Potato",
+    "disease_name": "Late Blight",
+    "is_healthy": false,
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "10": {
+    "crop": "Potato",
+    "disease_name": "Healthy Potato Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "11": {
+    "crop": "Tomato",
+    "disease_name": "Bacterial Spot",
+    "is_healthy": false,
+    "pathogen": "Xanthomonas perforans (Bacteria)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "12": {
+    "crop": "Tomato",
+    "disease_name": "Early Blight",
+    "is_healthy": false,
+    "pathogen": "Alternaria linariae (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "13": {
+    "crop": "Tomato",
+    "disease_name": "Late Blight",
+    "is_healthy": false,
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "14": {
+    "crop": "Tomato",
+    "disease_name": "Leaf Mold",
+    "is_healthy": false,
+    "pathogen": "Passalora fulva (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "15": {
+    "crop": "Tomato",
+    "disease_name": "Septoria Leaf Spot",
+    "is_healthy": false,
+    "pathogen": "Septoria lycopersici (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "16": {
+    "crop": "Tomato",
+    "disease_name": "Spider Mites (Two-spotted spider mite)",
+    "is_healthy": false,
+    "pathogen": "Tetranychus urticae (Arachnid Pest)",
+    "severity": "High",
+    "timeline_hours": 24
+  },
+  "17": {
+    "crop": "Tomato",
+    "disease_name": "Target Spot",
+    "is_healthy": false,
+    "pathogen": "Corynespora cassiicola (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "18": {
+    "crop": "Tomato",
+    "disease_name": "Yellow Leaf Curl Virus (TYLCV)",
+    "is_healthy": false,
+    "pathogen": "Begomovirus (Whitefly-transmitted Virus)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "19": {
+    "crop": "Tomato",
+    "disease_name": "Mosaic Virus (ToMV)",
+    "is_healthy": false,
+    "pathogen": "Tobamovirus (Mechanically transmitted Virus)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "20": {
+    "crop": "Tomato",
+    "disease_name": "Healthy Tomato Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "21": {
+    "crop": "Wheat",
+    "disease_name": "Yellow (Stripe) Rust",
+    "is_healthy": false,
+    "pathogen": "Puccinia striiformis (Fungus)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "22": {
+    "crop": "Wheat",
+    "disease_name": "Brown (Leaf) Rust",
+    "is_healthy": false,
+    "pathogen": "Puccinia triticina (Fungus)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "23": {
+    "crop": "Wheat",
+    "disease_name": "Powdery Mildew",
+    "is_healthy": false,
+    "pathogen": "Blumeria graminis (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "24": {
+    "crop": "Wheat",
+    "disease_name": "Healthy Wheat Crop",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "25": {
+    "crop": "Rice",
+    "disease_name": "Bacterial Leaf Blight (BLB)",
+    "is_healthy": false,
+    "pathogen": "Xanthomonas oryzae pv. oryzae (Bacteria)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "26": {
+    "crop": "Rice",
+    "disease_name": "Blast (Pyricularia)",
+    "is_healthy": false,
+    "pathogen": "Magnaporthe oryzae (Fungus)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "27": {
+    "crop": "Rice",
+    "disease_name": "Brown Spot",
+    "is_healthy": false,
+    "pathogen": "Bipolaris oryzae (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "28": {
+    "crop": "Rice",
+    "disease_name": "Sheath Blight",
+    "is_healthy": false,
+    "pathogen": "Rhizoctonia solani (Fungus)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "29": {
+    "crop": "Rice",
+    "disease_name": "Healthy Rice Crop",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "30": {
+    "crop": "Cotton",
+    "disease_name": "Bacterial Blight (Black Arm)",
+    "is_healthy": false,
+    "pathogen": "Xanthomonas citri pv. malvacearum (Bacteria)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "31": {
+    "crop": "Cotton",
+    "disease_name": "Cotton Leaf Curl Virus (CLCuV)",
+    "is_healthy": false,
+    "pathogen": "Begomovirus (Whitefly-transmitted Virus)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "32": {
+    "crop": "Cotton",
+    "disease_name": "Healthy Cotton Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "33": {
+    "crop": "Mustard",
+    "disease_name": "Alternaria Leaf Blight",
+    "is_healthy": false,
+    "pathogen": "Alternaria brassicae (Fungus)",
+    "severity": "Moderate",
+    "timeline_hours": 48
+  },
+  "34": {
+    "crop": "Mustard",
+    "disease_name": "White Rust (Blister)",
+    "is_healthy": false,
+    "pathogen": "Albugo candida (Oomycete)",
+    "severity": "High",
+    "timeline_hours": 36
+  },
+  "35": {
+    "crop": "Mustard",
+    "disease_name": "Healthy Mustard Crop",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  },
+  "36": {
+    "crop": "Soybean",
+    "disease_name": "Soybean Rust",
+    "is_healthy": false,
+    "pathogen": "Phakopsora pachyrhizi (Fungus)",
+    "severity": "Critical",
+    "timeline_hours": 24
+  },
+  "37": {
+    "crop": "Soybean",
+    "disease_name": "Healthy Soybean Foliage",
+    "is_healthy": true,
+    "pathogen": "None (Healthy)",
+    "severity": "None",
+    "timeline_hours": 168
+  }
+}

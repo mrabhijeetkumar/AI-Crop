@@ -154,3 +154,10 @@ Thumbs.db
 *~
 .gemini/
 .agents/
+
+# Isolated disease dataset/training workspace (source code is in ml/disease)
+.venv-disease/
+.bootstrap-disease/
+AI-Crop-Data/
+ml/disease/__pycache__/
+ml/disease/tests/__pycache__/
